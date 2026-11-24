@@ -29,16 +29,26 @@ use cli::Options;
 ///
 /// Only under `--sysroot`: the fixture's `fake.toml` is unreadable or invalid.
 pub fn run(options: &Options) -> Result<String, fake::FakeError> {
-    let (sys, _systemd): (Box<dyn sys::Sys>, Box<dyn systemd::Systemd>) =
+    let (sys, systemd): (Box<dyn sys::Sys>, Box<dyn systemd::Systemd>) =
         if options.sysroot == sysroot::Sysroot::default() {
             (Box::new(sys::RealSys), Box::new(systemd::DbusSystemd))
         } else {
             fake::Fake::load(options.sysroot.root())?.into_backends()
         };
+    let ctx = std::sync::Arc::new(collect::Ctx {
+        sysroot: options.sysroot.clone(),
+        sys,
+        systemd,
+    });
+    // Section collectors are registered here as they are written.
+    let collected = collect::run(Vec::new(), &ctx, collect::DEFAULT_DEADLINE);
     let report = model::Report {
-        generated_at: sys.now(),
-        host: collect::host::collect(&options.sysroot, sys.as_ref()),
-        ..model::Report::default()
+        generated_at: ctx.sys.now(),
+        host: collect::host::collect(&ctx.sysroot, ctx.sys.as_ref()),
+        sections: collected.sections,
+        meta: model::Meta {
+            timings: collected.timings,
+        },
     };
     let mut out = render::host_line(&report.host);
     out.push('\n');
