@@ -1,7 +1,8 @@
 //! motd-rs: a fast, compact, read-only system status dashboard for the Linux
 //! message of the day.
 //!
-//! Layers: `collect` (I/O, raw facts) → `render` (pure, facts → text).
+//! Layers: `collect` (I/O, raw facts) → `model` (pure data) → `render`
+//! (pure, [`model::Report`] → text).
 //! All file access goes through [`sysroot::Sysroot`] and every syscall through
 //! [`sys::Sys`], so the whole pipeline can run against a fake root filesystem
 //! (plus its `fake.toml`) in tests.
@@ -9,6 +10,7 @@
 pub mod cli;
 pub mod collect;
 pub mod fake;
+pub mod model;
 pub mod parse;
 pub mod render;
 pub mod sys;
@@ -33,8 +35,12 @@ pub fn run(options: &Options) -> Result<String, fake::FakeError> {
         } else {
             fake::Fake::load(options.sysroot.root())?.into_backends()
         };
-    let host = collect::host::collect(&options.sysroot, sys.as_ref());
-    let mut out = render::host_line(&host);
+    let report = model::Report {
+        generated_at: sys.now(),
+        host: collect::host::collect(&options.sysroot, sys.as_ref()),
+        ..model::Report::default()
+    };
+    let mut out = render::host_line(&report.host);
     out.push('\n');
     Ok(out)
 }

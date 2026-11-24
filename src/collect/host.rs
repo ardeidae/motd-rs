@@ -1,20 +1,9 @@
 //! Host identity: hostname, OS, kernel, architecture, uptime.
 
+use crate::model::Host;
 use crate::parse::{os_release, uptime};
 use crate::sys::Sys;
 use crate::sysroot::Sysroot;
-
-/// Raw host facts. `None` = could not be read.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Host {
-    pub hostname: Option<String>,
-    pub os: Option<String>,
-    pub kernel: Option<String>,
-    /// Hardware name of the running kernel (`uname -m`), not the build target:
-    /// a 32-bit binary may run on a 64-bit kernel.
-    pub arch: Option<String>,
-    pub uptime_secs: Option<u64>,
-}
 
 /// Reads the host facts.
 #[must_use]

@@ -1,6 +1,6 @@
 //! Rendering: pure functions from collected facts to text.
 
-use crate::collect::host::Host;
+use crate::model::Host;
 
 /// Shown when a value could not be read.
 pub const UNKNOWN: &str = "?";
