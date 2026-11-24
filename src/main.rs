@@ -16,6 +16,14 @@ fn main() -> ExitCode {
     let text = match command {
         Command::Help => cli::HELP.to_owned(),
         Command::Version => format!("motd-rs {}\n", env!("CARGO_PKG_VERSION")),
+        Command::PrintDefaultConfig => motd_rs::config::DEFAULT_CONFIG.to_owned(),
+        Command::CheckConfig(options) => match motd_rs::check_config(&options) {
+            Ok(text) => text,
+            Err(err) => {
+                let _ = writeln!(std::io::stderr(), "motd-rs: {err}");
+                return ExitCode::from(1);
+            }
+        },
         Command::Run(options) => match motd_rs::run(&options) {
             Ok(text) => text,
             Err(err) => {

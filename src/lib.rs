@@ -9,6 +9,7 @@
 
 pub mod cli;
 pub mod collect;
+pub mod config;
 pub mod fake;
 pub mod model;
 pub mod parse;
@@ -17,25 +18,79 @@ pub mod sys;
 pub mod sysroot;
 pub mod systemd;
 
+use std::fmt;
+use std::sync::Arc;
+
 use cli::Options;
 
-/// Collects everything and renders the report as text.
-///
+/// Why a command could not run.
+#[derive(Debug)]
+pub enum Error {
+    /// Under `--sysroot`: the fixture's `fake.toml` is unreadable or invalid.
+    Fake(fake::FakeError),
+    /// `--check-config` found a problem in the config file.
+    Config(config::ConfigError),
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Fake(err) => err.fmt(f),
+            Self::Config(err) => err.fmt(f),
+        }
+    }
+}
+
+impl std::error::Error for Error {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Fake(err) => Some(err),
+            Self::Config(err) => Some(err),
+        }
+    }
+}
+
+impl From<fake::FakeError> for Error {
+    fn from(err: fake::FakeError) -> Self {
+        Self::Fake(err)
+    }
+}
+
+/// The syscall and systemd backends of a run.
+type Backends = (Box<dyn sys::Sys>, Box<dyn systemd::Systemd>);
+
 /// On the real root the syscalls go to libc and systemd is asked over D-Bus.
 /// Under `--sysroot` both are answered by the fixture's `fake.toml`, so a
 /// captured machine renders the same everywhere.
+fn backends(options: &Options) -> Result<Backends, Error> {
+    if options.sysroot == sysroot::Sysroot::default() {
+        Ok((Box::new(sys::RealSys), Box::new(systemd::DbusSystemd)))
+    } else {
+        Ok(fake::Fake::load(options.sysroot.root())?.into_backends())
+    }
+}
+
+fn load_config(options: &Options, sys: &dyn sys::Sys) -> config::Loaded {
+    config::load(&config::candidates(
+        options.config.as_deref(),
+        |name| std::env::var_os(name),
+        sys.euid(),
+        &options.sysroot,
+    ))
+}
+
+/// Collects everything and renders the report as text.
+///
+/// A broken config file does not stop the run: the defaults are used and the
+/// report carries the error.
 ///
 /// # Errors
 ///
 /// Only under `--sysroot`: the fixture's `fake.toml` is unreadable or invalid.
-pub fn run(options: &Options) -> Result<String, fake::FakeError> {
-    let (sys, systemd): (Box<dyn sys::Sys>, Box<dyn systemd::Systemd>) =
-        if options.sysroot == sysroot::Sysroot::default() {
-            (Box::new(sys::RealSys), Box::new(systemd::DbusSystemd))
-        } else {
-            fake::Fake::load(options.sysroot.root())?.into_backends()
-        };
-    let ctx = std::sync::Arc::new(collect::Ctx {
+pub fn run(options: &Options) -> Result<String, Error> {
+    let (sys, systemd) = backends(options)?;
+    let loaded = load_config(options, sys.as_ref());
+    let ctx = Arc::new(collect::Ctx {
         sysroot: options.sysroot.clone(),
         sys,
         systemd,
@@ -48,9 +103,27 @@ pub fn run(options: &Options) -> Result<String, fake::FakeError> {
         sections: collected.sections,
         meta: model::Meta {
             timings: collected.timings,
+            config_error: loaded.error.map(|err| err.to_string()),
         },
     };
     let mut out = render::host_line(&report.host);
     out.push('\n');
     Ok(out)
+}
+
+/// `--check-config`: finds the config file a run would use and validates it.
+/// Returns the line to print when it is fine.
+///
+/// # Errors
+///
+/// The config file is unreadable or invalid (or, under `--sysroot`, the
+/// fixture's `fake.toml` is).
+pub fn check_config(options: &Options) -> Result<String, Error> {
+    let (sys, _) = backends(options)?;
+    let loaded = load_config(options, sys.as_ref());
+    match (loaded.error, loaded.path) {
+        (Some(err), _) => Err(Error::Config(err)),
+        (None, Some(path)) => Ok(format!("{}: OK\n", path.display())),
+        (None, None) => Ok("no config file found, using the built-in defaults\n".to_owned()),
+    }
 }

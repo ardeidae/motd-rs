@@ -90,6 +90,9 @@ pub trait Sys: Send + Sync + fmt::Debug {
     ///
     /// Any `uname` error.
     fn machine(&self) -> io::Result<String>;
+
+    /// Effective user id of this process (`0` = root).
+    fn euid(&self) -> u32;
 }
 
 /// The real system, through libc.
@@ -193,6 +196,11 @@ impl Sys for RealSys {
         // SAFETY: `uname` returned 0, so it filled the whole struct.
         let uts = unsafe { uts.assume_init() };
         Ok(c_chars_to_string(&uts.machine))
+    }
+
+    fn euid(&self) -> u32 {
+        // SAFETY: `geteuid` takes no argument, cannot fail and touches no memory.
+        unsafe { libc::geteuid() }
     }
 }
 
@@ -299,6 +307,9 @@ pub struct FakeSys {
     pub interfaces: Vec<Ipv4Interface>,
     /// `statvfs` answers, by mount point.
     pub statvfs: BTreeMap<String, FsStats>,
+    /// Effective user id. `0` (root) by default, so a fixture never picks up
+    /// the config file of the person running the tests.
+    pub euid: u32,
 }
 
 impl Sys for FakeSys {
@@ -330,6 +341,10 @@ impl Sys for FakeSys {
         self.machine
             .clone()
             .ok_or_else(|| io::Error::from(io::ErrorKind::NotFound))
+    }
+
+    fn euid(&self) -> u32 {
+        self.euid
     }
 }
 

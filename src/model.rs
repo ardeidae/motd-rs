@@ -274,6 +274,9 @@ pub struct Timing {
 pub struct Meta {
     /// One entry per collector that was started.
     pub timings: Vec<Timing>,
+    /// Why the config file was rejected (the defaults were used instead).
+    /// Shown as an alert, so a broken file is noticed without blocking login.
+    pub config_error: Option<String>,
 }
 
 /// Everything one run collected.
