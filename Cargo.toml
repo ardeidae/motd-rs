@@ -36,7 +36,10 @@ print_stdout = "deny" # write through a locked handle and handle errors (broken 
 print_stderr = "deny"
 
 [profile.release]
-opt-level = 3
+# "s" instead of 3: about 230 KB smaller (less inlining of generic serde and
+# zbus code) with no measurable cost, since a run is spent in syscalls and
+# small /proc reads, not in hot loops.
+opt-level = "s"
 lto = "fat"
 codegen-units = 1
 panic = "abort"

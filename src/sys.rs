@@ -148,6 +148,11 @@ impl Sys for RealSys {
         }
     }
 
+    // On musl the `libc` crate marks `time_t` deprecated: it is still 32-bit
+    // on 32-bit musl targets and will become 64-bit in a future release. The
+    // 32-bit `localtime_r` symbol it links to stays valid until 2038, and the
+    // `try_from` below returns `None` past that instead of wrapping.
+    #[allow(deprecated)]
     fn local_time(&self, epoch_secs: i64) -> Option<String> {
         let time = libc::time_t::try_from(epoch_secs).ok()?;
         let mut tm = MaybeUninit::<libc::tm>::uninit();
