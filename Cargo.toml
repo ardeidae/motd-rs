@@ -12,7 +12,10 @@ categories = ["command-line-utilities"]
 include = ["/src/**/*.rs", "/Cargo.toml", "/Cargo.lock", "/README.md", "/LICENSE"]
 
 [dependencies]
-# Added when first used: libc, toml + serde, zbus.
+libc = "0.2"
+serde = { version = "1", features = ["derive"] }
+toml = { version = "1", default-features = false, features = ["parse", "serde"] }
+# zbus is added with the systemd collector.
 
 [lints.rust]
 unsafe_code = "deny" # allowed only in src/sys.rs

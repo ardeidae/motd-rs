@@ -16,7 +16,13 @@ fn main() -> ExitCode {
     let text = match command {
         Command::Help => cli::HELP.to_owned(),
         Command::Version => format!("motd-rs {}\n", env!("CARGO_PKG_VERSION")),
-        Command::Run(options) => motd_rs::run(&options),
+        Command::Run(options) => match motd_rs::run(&options) {
+            Ok(text) => text,
+            Err(err) => {
+                let _ = writeln!(std::io::stderr(), "motd-rs: {err}");
+                return ExitCode::from(1);
+            }
+        },
     };
 
     // A closed stdout (e.g. `motd-rs | head -0`) must not panic.

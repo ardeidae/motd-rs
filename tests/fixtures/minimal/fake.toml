@@ -1,0 +1,2 @@
+# Answers of the faked syscalls for this fixture (see src/sys.rs `FakeSys`).
+machine = "aarch64"

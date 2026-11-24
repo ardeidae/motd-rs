@@ -13,9 +13,13 @@ pub fn host_line(host: &Host) -> String {
     if let Some(os) = &host.os {
         parts.push(sanitize(os));
     }
-    match &host.kernel {
-        Some(kernel) => parts.push(format!("{} {}", sanitize(kernel), host.arch)),
-        None => parts.push(host.arch.to_owned()),
+    let kernel_arch: Vec<String> = [&host.kernel, &host.arch]
+        .into_iter()
+        .flatten()
+        .map(|s| sanitize(s))
+        .collect();
+    if !kernel_arch.is_empty() {
+        parts.push(kernel_arch.join(" "));
     }
     if let Some(secs) = host.uptime_secs {
         parts.push(format!("up {}", format_uptime(secs)));
@@ -75,7 +79,7 @@ mod tests {
             hostname: Some("pi".into()),
             os: Some("Debian GNU/Linux 13 (trixie)".into()),
             kernel: Some("6.12.20-v8+".into()),
-            arch: "aarch64",
+            arch: Some("aarch64".into()),
             uptime_secs: Some(1_642_000),
         };
         assert_eq!(
@@ -86,9 +90,14 @@ mod tests {
             hostname: None,
             os: None,
             kernel: None,
-            arch: "x86_64",
+            arch: None,
             uptime_secs: None,
         };
-        assert_eq!(host_line(&empty), "?  x86_64");
+        assert_eq!(host_line(&empty), "?");
+        let arch_only = Host {
+            arch: Some("x86_64".into()),
+            ..empty
+        };
+        assert_eq!(host_line(&arch_only), "?  x86_64");
     }
 }
