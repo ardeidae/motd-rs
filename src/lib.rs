@@ -8,28 +8,31 @@
 
 pub mod cli;
 pub mod collect;
+pub mod fake;
 pub mod parse;
 pub mod render;
 pub mod sys;
 pub mod sysroot;
+pub mod systemd;
 
 use cli::Options;
 
 /// Collects everything and renders the report as text.
 ///
-/// On the real root the syscalls go to libc. Under `--sysroot` they are
-/// answered by the fixture's `fake.toml`, so a captured machine renders the
-/// same everywhere.
+/// On the real root the syscalls go to libc and systemd is asked over D-Bus.
+/// Under `--sysroot` both are answered by the fixture's `fake.toml`, so a
+/// captured machine renders the same everywhere.
 ///
 /// # Errors
 ///
 /// Only under `--sysroot`: the fixture's `fake.toml` is unreadable or invalid.
-pub fn run(options: &Options) -> Result<String, sys::FakeError> {
-    let sys: Box<dyn sys::Sys> = if options.sysroot == sysroot::Sysroot::default() {
-        Box::new(sys::RealSys)
-    } else {
-        Box::new(sys::FakeSys::load(options.sysroot.root())?)
-    };
+pub fn run(options: &Options) -> Result<String, fake::FakeError> {
+    let (sys, _systemd): (Box<dyn sys::Sys>, Box<dyn systemd::Systemd>) =
+        if options.sysroot == sysroot::Sysroot::default() {
+            (Box::new(sys::RealSys), Box::new(systemd::DbusSystemd))
+        } else {
+            fake::Fake::load(options.sysroot.root())?.into_backends()
+        };
     let host = collect::host::collect(&options.sysroot, sys.as_ref());
     let mut out = render::host_line(&host);
     out.push('\n');

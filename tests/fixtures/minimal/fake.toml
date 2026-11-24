@@ -1,2 +1,11 @@
-# Answers of the faked syscalls for this fixture (see src/sys.rs `FakeSys`).
+# Faked answers for this fixture (see src/fake.rs).
+
+[sys]
 machine = "aarch64"
+
+[[systemd.units]]
+name = "ssh.service"
+description = "OpenBSD Secure Shell server"
+load_state = "loaded"
+active_state = "active"
+sub_state = "running"

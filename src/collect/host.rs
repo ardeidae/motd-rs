@@ -43,7 +43,7 @@ fn read_trimmed(sysroot: &Sysroot, path: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::sys::FakeSys;
+    use crate::fake::Fake;
 
     fn fixture(name: &str) -> Sysroot {
         Sysroot::new(format!(
@@ -55,7 +55,8 @@ mod tests {
     #[test]
     fn reads_fixture() {
         let root = fixture("minimal");
-        let host = collect(&root, &FakeSys::load(root.root()).unwrap());
+        let (sys, _) = Fake::load(root.root()).unwrap().into_backends();
+        let host = collect(&root, sys.as_ref());
         assert_eq!(host.hostname.as_deref(), Some("raspberrypi"));
         assert_eq!(host.os.as_deref(), Some("Debian GNU/Linux 13 (trixie)"));
         assert_eq!(host.kernel.as_deref(), Some("6.12.20-v8+"));
@@ -67,7 +68,7 @@ mod tests {
     fn empty_root_gives_unknowns() {
         let host = collect(
             &Sysroot::new("/nonexistent-motd-rs-root"),
-            &FakeSys::default(),
+            &crate::sys::FakeSys::default(),
         );
         assert_eq!(host.hostname, None);
         assert_eq!(host.os, None);

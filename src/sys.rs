@@ -281,8 +281,9 @@ fn c_chars_to_string(chars: &[libc::c_char]) -> String {
     String::from_utf8_lossy(&bytes).into_owned()
 }
 
-/// A fake system for tests and `--sysroot`, read from the fixture's `fake.toml`.
-/// Anything not listed fails (`statvfs`) or is absent (`None`).
+/// A fake system for tests and `--sysroot`: the `[sys]` table of the
+/// fixture's `fake.toml`. Anything not listed fails (`statvfs`) or is absent
+/// (`None`).
 #[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields, default)]
 pub struct FakeSys {
@@ -298,51 +299,6 @@ pub struct FakeSys {
     pub interfaces: Vec<Ipv4Interface>,
     /// `statvfs` answers, by mount point.
     pub statvfs: BTreeMap<String, FsStats>,
-}
-
-/// `fake.toml` could not be read or parsed.
-#[derive(Debug)]
-pub enum FakeError {
-    /// I/O error other than "not found".
-    Io(io::Error),
-    /// Invalid TOML or unknown key.
-    Toml(toml::de::Error),
-}
-
-impl fmt::Display for FakeError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Io(e) => write!(f, "cannot read fake.toml: {e}"),
-            Self::Toml(e) => write!(f, "invalid fake.toml: {e}"),
-        }
-    }
-}
-
-impl std::error::Error for FakeError {}
-
-impl FakeSys {
-    /// Parses a `fake.toml` document.
-    ///
-    /// # Errors
-    ///
-    /// Invalid TOML, wrong types or unknown keys.
-    pub fn from_toml(text: &str) -> Result<Self, FakeError> {
-        toml::from_str(text).map_err(FakeError::Toml)
-    }
-
-    /// Loads `<root>/fake.toml`. A missing file gives an empty fake (every
-    /// syscall unavailable), so a bare fake root still renders.
-    ///
-    /// # Errors
-    ///
-    /// Unreadable or invalid file.
-    pub fn load(root: &Path) -> Result<Self, FakeError> {
-        match std::fs::read_to_string(root.join("fake.toml")) {
-            Ok(text) => Self::from_toml(&text),
-            Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(Self::default()),
-            Err(e) => Err(FakeError::Io(e)),
-        }
-    }
 }
 
 impl Sys for FakeSys {
@@ -452,7 +408,7 @@ mod tests {
 
     #[test]
     fn fake_from_toml() {
-        let fake = FakeSys::from_toml(
+        let fake = toml::from_str::<FakeSys>(
             r#"
             machine = "armv6l"
             now = 1795000000
@@ -491,16 +447,9 @@ mod tests {
 
     #[test]
     fn fake_rejects_bad_input() {
-        assert!(FakeSys::from_toml("bogus = 1").is_err());
-        assert!(FakeSys::from_toml("machine = 3").is_err());
-        assert!(FakeSys::from_toml("[[interfaces]]\nname = \"x\"").is_err());
-        assert!(FakeSys::from_toml("machine = \"x").is_err());
-    }
-
-    #[test]
-    fn fake_missing_file_is_empty() {
-        let fake = FakeSys::load(Path::new("/nonexistent-motd-rs-root")).unwrap();
-        assert_eq!(fake, FakeSys::default());
-        assert!(fake.machine().is_err());
+        assert!(toml::from_str::<FakeSys>("bogus = 1").is_err());
+        assert!(toml::from_str::<FakeSys>("machine = 3").is_err());
+        assert!(toml::from_str::<FakeSys>("[[interfaces]]\nname = \"x\"").is_err());
+        assert!(toml::from_str::<FakeSys>("machine = \"x").is_err());
     }
 }

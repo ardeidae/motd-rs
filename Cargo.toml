@@ -15,7 +15,7 @@ include = ["/src/**/*.rs", "/Cargo.toml", "/Cargo.lock", "/README.md", "/LICENSE
 libc = "0.2"
 serde = { version = "1", features = ["derive"] }
 toml = { version = "1", default-features = false, features = ["parse", "serde"] }
-# zbus is added with the systemd collector.
+zbus = { version = "6", default-features = false, features = ["comms", "default-rt"] }
 
 [lints.rust]
 unsafe_code = "deny" # allowed only in src/sys.rs
