@@ -166,3 +166,55 @@ fn a_broken_config_does_not_stop_the_run() {
             .starts_with("raspberrypi ")
     );
 }
+
+#[test]
+fn output_writes_the_file_not_stdout() {
+    let dir = scratch("output");
+    let target = dir.join("50-motd-rs");
+    let out = run(&[
+        "--sysroot",
+        &fixture("minimal"),
+        "--output",
+        target.to_str().unwrap(),
+    ]);
+    assert!(out.status.success());
+    assert_eq!(String::from_utf8_lossy(&out.stdout), "");
+    assert_eq!(String::from_utf8_lossy(&out.stderr), "");
+    assert_eq!(
+        std::fs::read_to_string(&target).unwrap(),
+        "raspberrypi  Debian GNU/Linux 13 (trixie)  6.12.20-v8+ aarch64  up 19d 0h06m\n"
+    );
+    std::fs::remove_dir_all(&dir).unwrap();
+}
+
+#[test]
+fn output_error_exits_2_with_message() {
+    let dir = scratch("output-missing");
+    let target = dir.join("no-such-dir/motd");
+    let out = run(&[
+        "--sysroot",
+        &fixture("minimal"),
+        "--output",
+        target.to_str().unwrap(),
+    ]);
+    assert_eq!(out.status.code(), Some(2));
+    assert_eq!(String::from_utf8_lossy(&out.stdout), "");
+    let err = String::from_utf8(out.stderr).unwrap();
+    assert!(
+        err.starts_with(&format!("motd-rs: {}: ", target.display())),
+        "{err}"
+    );
+    std::fs::remove_dir_all(&dir).unwrap();
+}
+
+#[test]
+fn invalid_option_value_exits_1() {
+    let out = run(&["--deadline", "0"]);
+    assert_eq!(out.status.code(), Some(1));
+    assert_eq!(String::from_utf8_lossy(&out.stdout), "");
+    assert!(
+        String::from_utf8(out.stderr)
+            .unwrap()
+            .contains("invalid value '0' for --deadline")
+    );
+}

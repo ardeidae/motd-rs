@@ -13,6 +13,7 @@ fn main() -> ExitCode {
         }
     };
 
+    let mut output = None;
     let text = match command {
         Command::Help => cli::HELP.to_owned(),
         Command::Version => format!("motd-rs {}\n", env!("CARGO_PKG_VERSION")),
@@ -25,7 +26,10 @@ fn main() -> ExitCode {
             }
         },
         Command::Run(options) => match motd_rs::run(&options) {
-            Ok(text) => text,
+            Ok(text) => {
+                output = options.output;
+                text
+            }
             Err(err) => {
                 let _ = writeln!(std::io::stderr(), "motd-rs: {err}");
                 return ExitCode::from(1);
@@ -33,13 +37,18 @@ fn main() -> ExitCode {
         },
     };
 
-    // A closed stdout (e.g. `motd-rs | head -0`) must not panic.
-    let mut stdout = std::io::stdout().lock();
-    match stdout
-        .write_all(text.as_bytes())
-        .and_then(|()| stdout.flush())
-    {
-        Ok(()) => ExitCode::SUCCESS,
-        Err(_) => ExitCode::from(2),
+    match output {
+        Some(path) => match motd_rs::output::to_file(&path, text.as_bytes()) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(err) => {
+                let _ = writeln!(std::io::stderr(), "motd-rs: {}: {err}", path.display());
+                ExitCode::from(2)
+            }
+        },
+        // A closed stdout (e.g. `motd-rs | head -0`) is not worth a message.
+        None => match motd_rs::output::to_stdout(text.as_bytes()) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(_) => ExitCode::from(2),
+        },
     }
 }

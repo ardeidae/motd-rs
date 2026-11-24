@@ -12,6 +12,7 @@ pub mod collect;
 pub mod config;
 pub mod fake;
 pub mod model;
+pub mod output;
 pub mod parse;
 pub mod render;
 pub mod sys;
@@ -90,13 +91,15 @@ fn load_config(options: &Options, sys: &dyn sys::Sys) -> config::Loaded {
 pub fn run(options: &Options) -> Result<String, Error> {
     let (sys, systemd) = backends(options)?;
     let loaded = load_config(options, sys.as_ref());
+    let mut config = loaded.config;
+    options.display.apply(&mut config.display);
     let ctx = Arc::new(collect::Ctx {
         sysroot: options.sysroot.clone(),
         sys,
         systemd,
     });
     // Section collectors are registered here as they are written.
-    let collected = collect::run(Vec::new(), &ctx, collect::DEFAULT_DEADLINE);
+    let collected = collect::run(Vec::new(), &ctx, options.deadline);
     let report = model::Report {
         generated_at: ctx.sys.now(),
         host: collect::host::collect(&ctx.sysroot, ctx.sys.as_ref()),
@@ -106,6 +109,8 @@ pub fn run(options: &Options) -> Result<String, Error> {
             config_error: loaded.error.map(|err| err.to_string()),
         },
     };
+    // `config` is read by the collectors, eval and render as they are written.
+    let _ = config;
     let mut out = render::host_line(&report.host);
     out.push('\n');
     Ok(out)
