@@ -1,0 +1,97 @@
+name: CI
+
+on:
+  push:
+    branches: [master, develop, "rust/**", "feature/**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -D warnings
+  MSRV: "1.89"
+  # Release binary size budget: 1.5 MiB.
+  MAX_BINARY_BYTES: "1572864"
+
+jobs:
+  fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: rustup show active-toolchain || rustup toolchain install
+      - run: cargo fmt --all --check
+
+  clippy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: rustup show active-toolchain || rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo clippy --all-targets --locked -- -D warnings
+
+  test:
+    name: test (${{ matrix.toolchain }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        toolchain: [pinned, msrv]
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install toolchain
+        run: |
+          if [ "${{ matrix.toolchain }}" = msrv ]; then
+            rustup toolchain install "$MSRV" --profile minimal
+            echo "RUSTUP_TOOLCHAIN=$MSRV" >> "$GITHUB_ENV"
+          else
+            rustup show active-toolchain || rustup toolchain install
+          fi
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.toolchain }}
+      # The runner has systemd: also run the tests that need a real system bus.
+      - run: cargo test --locked -- --include-ignored
+
+  deny:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: EmbarkStudios/cargo-deny-action@v2
+
+  musl:
+    name: build (${{ matrix.target }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - x86_64-unknown-linux-musl
+          - aarch64-unknown-linux-musl
+          - arm-unknown-linux-musleabihf # ARMv6 hard-float: every 32-bit Raspberry Pi
+    steps:
+      - uses: actions/checkout@v5
+      - run: rustup show active-toolchain || rustup toolchain install
+      - run: rustup target add ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+      - name: Install zig + cargo-zigbuild
+        run: |
+          pip install --user ziglang
+          cargo install --locked cargo-zigbuild
+      - run: cargo zigbuild --release --locked --target ${{ matrix.target }}
+      - name: Check binary size
+        run: |
+          bin=target/${{ matrix.target }}/release/motd-rs
+          size=$(stat -c %s "$bin")
+          echo "$bin: $size bytes (max $MAX_BINARY_BYTES)"
+          test "$size" -le "$MAX_BINARY_BYTES"
+      - name: Smoke test (x86_64 only)
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        run: target/${{ matrix.target }}/release/motd-rs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: motd-rs-${{ matrix.target }}
+          path: target/${{ matrix.target }}/release/motd-rs
