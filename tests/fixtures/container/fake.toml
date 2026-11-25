@@ -1,0 +1,273 @@
+# Faked answers for this fixture (see src/fake.rs).
+# Captured with scripts/capture-fixture.sh on 2026-11-25.
+
+[sys]
+machine = "x86_64"
+now = 1795610123
+local_time = "Wed 25 Nov 12:35 UTC"
+
+[[sys.interfaces]]
+name = "lo"
+addr = "127.0.0.1"
+prefix_len = 8
+up = true
+loopback = true
+
+[[sys.interfaces]]
+name = "eth0"
+addr = "192.0.2.5"
+prefix_len = 16
+up = true
+loopback = false
+
+[sys.statvfs."/"]
+total_bytes = 20957446144
+free_bytes = 4148424704
+avail_bytes = 4131647488
+total_inodes = 1310720
+free_inodes = 873128
+
+[sys.statvfs."/dev"]
+total_bytes = 67108864
+free_bytes = 67108864
+avail_bytes = 67108864
+total_inodes = 3035457
+free_inodes = 3035441
+
+[sys.statvfs."/dev/shm"]
+total_bytes = 67108864
+free_bytes = 67108864
+avail_bytes = 67108864
+total_inodes = 3035457
+free_inodes = 3035456
+
+[sys.statvfs."/etc/hostname"]
+total_bytes = 20957446144
+free_bytes = 4148424704
+avail_bytes = 4131647488
+total_inodes = 1310720
+free_inodes = 873128
+
+[sys.statvfs."/etc/hosts"]
+total_bytes = 20957446144
+free_bytes = 4148424704
+avail_bytes = 4131647488
+total_inodes = 1310720
+free_inodes = 873128
+
+[sys.statvfs."/etc/resolv.conf"]
+total_bytes = 20957446144
+free_bytes = 4148424704
+avail_bytes = 4131647488
+total_inodes = 1310720
+free_inodes = 873128
+
+[sys.statvfs."/proc/acpi"]
+total_bytes = 4096
+free_bytes = 4096
+avail_bytes = 4096
+total_inodes = 1
+free_inodes = 0
+
+[sys.statvfs."/proc/asound"]
+total_bytes = 4096
+free_bytes = 4096
+avail_bytes = 4096
+total_inodes = 1
+free_inodes = 0
+
+[sys.statvfs."/proc/interrupts"]
+total_bytes = 67108864
+free_bytes = 67108864
+avail_bytes = 67108864
+total_inodes = 3035457
+free_inodes = 3035441
+
+[sys.statvfs."/proc/kcore"]
+total_bytes = 67108864
+free_bytes = 67108864
+avail_bytes = 67108864
+total_inodes = 3035457
+free_inodes = 3035441
+
+[sys.statvfs."/proc/keys"]
+total_bytes = 67108864
+free_bytes = 67108864
+avail_bytes = 67108864
+total_inodes = 3035457
+free_inodes = 3035441
+
+[sys.statvfs."/proc/latency_stats"]
+total_bytes = 67108864
+free_bytes = 67108864
+avail_bytes = 67108864
+total_inodes = 3035457
+free_inodes = 3035441
+
+[sys.statvfs."/proc/scsi"]
+total_bytes = 4096
+free_bytes = 4096
+avail_bytes = 4096
+total_inodes = 1
+free_inodes = 0
+
+[sys.statvfs."/proc/timer_list"]
+total_bytes = 67108864
+free_bytes = 67108864
+avail_bytes = 67108864
+total_inodes = 3035457
+free_inodes = 3035441
+
+[sys.statvfs."/sys/devices/system/cpu/cpu0/thermal_throttle"]
+total_bytes = 4096
+free_bytes = 4096
+avail_bytes = 4096
+total_inodes = 1
+free_inodes = 0
+
+[sys.statvfs."/sys/devices/system/cpu/cpu1/thermal_throttle"]
+total_bytes = 4096
+free_bytes = 4096
+avail_bytes = 4096
+total_inodes = 1
+free_inodes = 0
+
+[sys.statvfs."/sys/devices/system/cpu/cpu10/thermal_throttle"]
+total_bytes = 4096
+free_bytes = 4096
+avail_bytes = 4096
+total_inodes = 1
+free_inodes = 0
+
+[sys.statvfs."/sys/devices/system/cpu/cpu11/thermal_throttle"]
+total_bytes = 4096
+free_bytes = 4096
+avail_bytes = 4096
+total_inodes = 1
+free_inodes = 0
+
+[sys.statvfs."/sys/devices/system/cpu/cpu12/thermal_throttle"]
+total_bytes = 4096
+free_bytes = 4096
+avail_bytes = 4096
+total_inodes = 1
+free_inodes = 0
+
+[sys.statvfs."/sys/devices/system/cpu/cpu13/thermal_throttle"]
+total_bytes = 4096
+free_bytes = 4096
+avail_bytes = 4096
+total_inodes = 1
+free_inodes = 0
+
+[sys.statvfs."/sys/devices/system/cpu/cpu14/thermal_throttle"]
+total_bytes = 4096
+free_bytes = 4096
+avail_bytes = 4096
+total_inodes = 1
+free_inodes = 0
+
+[sys.statvfs."/sys/devices/system/cpu/cpu15/thermal_throttle"]
+total_bytes = 4096
+free_bytes = 4096
+avail_bytes = 4096
+total_inodes = 1
+free_inodes = 0
+
+[sys.statvfs."/sys/devices/system/cpu/cpu16/thermal_throttle"]
+total_bytes = 4096
+free_bytes = 4096
+avail_bytes = 4096
+total_inodes = 1
+free_inodes = 0
+
+[sys.statvfs."/sys/devices/system/cpu/cpu17/thermal_throttle"]
+total_bytes = 4096
+free_bytes = 4096
+avail_bytes = 4096
+total_inodes = 1
+free_inodes = 0
+
+[sys.statvfs."/sys/devices/system/cpu/cpu18/thermal_throttle"]
+total_bytes = 4096
+free_bytes = 4096
+avail_bytes = 4096
+total_inodes = 1
+free_inodes = 0
+
+[sys.statvfs."/sys/devices/system/cpu/cpu19/thermal_throttle"]
+total_bytes = 4096
+free_bytes = 4096
+avail_bytes = 4096
+total_inodes = 1
+free_inodes = 0
+
+[sys.statvfs."/sys/devices/system/cpu/cpu2/thermal_throttle"]
+total_bytes = 4096
+free_bytes = 4096
+avail_bytes = 4096
+total_inodes = 1
+free_inodes = 0
+
+[sys.statvfs."/sys/devices/system/cpu/cpu3/thermal_throttle"]
+total_bytes = 4096
+free_bytes = 4096
+avail_bytes = 4096
+total_inodes = 1
+free_inodes = 0
+
+[sys.statvfs."/sys/devices/system/cpu/cpu4/thermal_throttle"]
+total_bytes = 4096
+free_bytes = 4096
+avail_bytes = 4096
+total_inodes = 1
+free_inodes = 0
+
+[sys.statvfs."/sys/devices/system/cpu/cpu5/thermal_throttle"]
+total_bytes = 4096
+free_bytes = 4096
+avail_bytes = 4096
+total_inodes = 1
+free_inodes = 0
+
+[sys.statvfs."/sys/devices/system/cpu/cpu6/thermal_throttle"]
+total_bytes = 4096
+free_bytes = 4096
+avail_bytes = 4096
+total_inodes = 1
+free_inodes = 0
+
+[sys.statvfs."/sys/devices/system/cpu/cpu7/thermal_throttle"]
+total_bytes = 4096
+free_bytes = 4096
+avail_bytes = 4096
+total_inodes = 1
+free_inodes = 0
+
+[sys.statvfs."/sys/devices/system/cpu/cpu8/thermal_throttle"]
+total_bytes = 4096
+free_bytes = 4096
+avail_bytes = 4096
+total_inodes = 1
+free_inodes = 0
+
+[sys.statvfs."/sys/devices/system/cpu/cpu9/thermal_throttle"]
+total_bytes = 4096
+free_bytes = 4096
+avail_bytes = 4096
+total_inodes = 1
+free_inodes = 0
+
+[sys.statvfs."/sys/devices/virtual/powercap"]
+total_bytes = 4096
+free_bytes = 4096
+avail_bytes = 4096
+total_inodes = 1
+free_inodes = 0
+
+[sys.statvfs."/sys/firmware"]
+total_bytes = 4096
+free_bytes = 4096
+avail_bytes = 4096
+total_inodes = 1
+free_inodes = 0
