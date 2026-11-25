@@ -42,7 +42,7 @@ pressure    = [10, 25]      # PSI "some avg10", %
 temperature = [70, 85]      # degrees Celsius
 
 [disks]
-exclude         = ["/boot", "/boot/efi", "/snap/*"]   # mount points; globs: * and ?
+exclude         = ["/boot", "/boot/efi", "/snap/*"]   # mount points; globs: ? and * (* also matches /)
 include_network = false                               # NFS, CIFS, ... (statvfs can hang)
 
 [services]

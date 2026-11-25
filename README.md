@@ -4,8 +4,8 @@ A fast, compact, read-only system status dashboard for the Linux message of
 the day.
 
 > **Status: early development.** It prints the host line (hostname, OS,
-> kernel, architecture, uptime, date), the process count and load, and
-> memory (RAM, swap, cache, buffers) on plain lines. Disks, network,
+> kernel, architecture, uptime, date), the process count and load, memory
+> (RAM, swap, cache, buffers) and disk usage on plain lines. Network,
 > services, ports and the column layout are coming.
 
 ## Goals

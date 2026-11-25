@@ -12,6 +12,7 @@ pub mod collect;
 pub mod config;
 pub mod eval;
 pub mod fake;
+pub mod glob;
 pub mod model;
 pub mod output;
 pub mod parse;
@@ -102,6 +103,7 @@ pub fn run(options: &Options) -> Result<String, Error> {
     let collectors: Vec<Box<dyn collect::Collector>> = vec![
         Box::new(collect::load::Load),
         Box::new(collect::memory::Memory),
+        Box::new(collect::disks::Disks::new(&config.disks)),
     ];
     let mut collected = collect::run(collectors, &ctx, options.deadline);
     eval::evaluate(&mut collected.sections, &config.thresholds);
@@ -120,6 +122,7 @@ pub fn run(options: &Options) -> Result<String, Error> {
     let lines = [
         render::load_line(&report.sections),
         render::memory_line(&report.sections),
+        render::disks_line(&report.sections),
     ];
     for line in lines.into_iter().flatten() {
         out.push_str(&line);

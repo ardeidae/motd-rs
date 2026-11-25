@@ -37,7 +37,19 @@ impl Sysroot {
         std::fs::read_to_string(self.path(system_path))
     }
 
-    /// The root directory itself.
+    /// Reads a whole file; invalid UTF-8 is replaced instead of failing. For
+    /// files that may carry raw non-UTF-8 bytes from users, such as mount
+    /// points in mountinfo: one odd name must not hide every other line.
+    ///
+    /// # Errors
+    ///
+    /// The file cannot be opened or read.
+    pub fn read_lossy(&self, system_path: &str) -> io::Result<String> {
+        let bytes = std::fs::read(self.path(system_path))?;
+        Ok(String::from_utf8(bytes)
+            .unwrap_or_else(|err| String::from_utf8_lossy(err.as_bytes()).into_owned()))
+    }
+
     /// Reads a small file (at most `N` bytes) with one buffer and no size
     /// query: `/proc` files report a size of 0, so `read_to_string` would ask
     /// for the size, then read in small growing chunks. Scanning
@@ -81,6 +93,7 @@ impl Sysroot {
             .collect())
     }
 
+    /// The root directory itself.
     #[must_use]
     pub fn root(&self) -> &Path {
         &self.root

@@ -100,6 +100,34 @@ pub fn memory_line(sections: &[Section]) -> Option<String> {
     Some(parts.join("  "))
 }
 
+/// `disks / 79% 16G/20G  /boot/firmware 31% 159M/505M`. Temporary plain
+/// line until the column layout exists, like [`load_line`]. `None` without
+/// a disks section or when it has no row (nothing to show).
+#[must_use]
+pub fn disks_line(sections: &[Section]) -> Option<String> {
+    let section = sections.iter().find(|s| s.id == SectionId::Disks)?;
+    if section.error.is_some() {
+        return Some(format!("disks {UNKNOWN}"));
+    }
+    let parts: Vec<String> = section
+        .items
+        .iter()
+        .map(|item| {
+            let label = sanitize(&item.label);
+            match item.value {
+                Value::Usage { used, total } => format!(
+                    "{label} {} {}/{}",
+                    format_percent(used, total),
+                    format_size(used),
+                    format_size(total)
+                ),
+                _ => format!("{label} {UNKNOWN}"),
+            }
+        })
+        .collect();
+    (!parts.is_empty()).then(|| format!("disks {}", parts.join("  ")))
+}
+
 /// IEC size in at most 4 characters, no locale: `999B`, `1.0K`, `9.9M`,
 /// `38G`, `222M`, `16E`. One decimal below 10 units, none from 10 up; a
 /// value that would need 4 digits moves to the next unit (`1000M` → `1.0G`).
@@ -296,6 +324,30 @@ mod tests {
         let failed = vec![Section::failed(SectionId::Memory, "unreadable")];
         assert_eq!(memory_line(&failed).unwrap(), "ram ?");
         assert_eq!(memory_line(&[]), None);
+    }
+
+    #[test]
+    fn disks_line_formats() {
+        let section = |items| vec![Section::new(SectionId::Disks, items)];
+        let gib = 1 << 30;
+        let rows = section(vec![
+            Item::new(
+                "/",
+                Value::Usage {
+                    used: 16 * gib,
+                    total: 20 * gib,
+                },
+            ),
+            Item::new("/mnt/\u{1b}[31m", Value::Missing),
+        ]);
+        assert_eq!(
+            disks_line(&rows).unwrap(),
+            "disks / 80% 16G/20G  /mnt/?[31m ?"
+        );
+        assert_eq!(disks_line(&section(vec![])), None, "nothing to show");
+        let failed = vec![Section::failed(SectionId::Disks, "unreadable")];
+        assert_eq!(disks_line(&failed).unwrap(), "disks ?");
+        assert_eq!(disks_line(&[]), None);
     }
 
     #[test]

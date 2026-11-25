@@ -23,7 +23,7 @@ pub fn evaluate(sections: &mut [Section], thresholds: &Thresholds) {
 
 /// `None` for values that have no threshold (they keep their status). A
 /// `Usage` is judged by what it measures: the same value type is used for
-/// RAM, swap and, later, disks.
+/// RAM, swap and disks.
 fn judge(
     section: SectionId,
     label: &str,
@@ -38,6 +38,7 @@ fn judge(
         (SectionId::Memory, memory_items::SWAP, &Value::Usage { used, total }) => {
             usage(used, total, thresholds.swap)
         }
+        (SectionId::Disks, _, &Value::Usage { used, total }) => usage(used, total, thresholds.disk),
         _ => None,
     }
 }
@@ -157,6 +158,34 @@ mod tests {
             [Status::Ok, Status::Warn, Status::Ok, Status::Unknown]
         );
         assert_eq!(section.status, Status::Warn);
+    }
+
+    #[test]
+    fn disks_use_the_disk_levels() {
+        let mut sections = [Section::new(
+            SectionId::Disks,
+            vec![
+                Item::new(
+                    "/",
+                    Value::Usage {
+                        used: 79,
+                        total: 100,
+                    },
+                ),
+                Item::new(
+                    "/home",
+                    Value::Usage {
+                        used: 91,
+                        total: 100,
+                    },
+                ),
+                Item::new("/srv", Value::Missing),
+            ],
+        )];
+        evaluate(&mut sections, &Thresholds::default()); // disk 80/90
+        let statuses: Vec<Status> = sections[0].items.iter().map(|i| i.status).collect();
+        assert_eq!(statuses, [Status::Ok, Status::Crit, Status::Unknown]);
+        assert_eq!(sections[0].status, Status::Crit);
     }
 
     #[test]

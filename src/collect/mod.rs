@@ -19,6 +19,7 @@ use crate::sys::Sys;
 use crate::sysroot::Sysroot;
 use crate::systemd::Systemd;
 
+pub mod disks;
 pub mod host;
 pub mod load;
 pub mod memory;
