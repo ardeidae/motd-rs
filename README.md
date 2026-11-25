@@ -4,9 +4,10 @@ A fast, compact, read-only system status dashboard for the Linux message of
 the day.
 
 > **Status: early development.** It prints the host line (hostname, OS,
-> kernel, architecture, uptime, date), the process count and load, memory
-> (RAM, swap, cache, buffers) and disk usage on plain lines. Network,
-> services, ports and the column layout are coming.
+> kernel, architecture, uptime, date), the default-route interface with its
+> IPv4 and IPv6 addresses, the process count and load, memory (RAM, swap,
+> cache, buffers) and disk usage on plain lines. Users, services, ports and
+> the column layout are coming.
 
 ## Goals
 

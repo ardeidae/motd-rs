@@ -23,6 +23,7 @@ pub mod disks;
 pub mod host;
 pub mod load;
 pub mod memory;
+pub mod network;
 
 /// How long [`run`] waits for all collectors by default. Long enough for a
 /// D-Bus round trip on a loaded Raspberry Pi, short enough to go unnoticed at

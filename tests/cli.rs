@@ -28,7 +28,7 @@ fn renders_minimal_fixture() {
     assert!(out.status.success());
     assert_eq!(
         String::from_utf8(out.stdout).unwrap(),
-        "raspberrypi  Debian GNU/Linux 13 (trixie)  6.12.20-v8+ aarch64  up 19d 0h06m\nprocs 0  load ?\nram ?\ndisks ?\n"
+        "raspberrypi  Debian GNU/Linux 13 (trixie)  6.12.20-v8+ aarch64  up 19d 0h06m\nnet ?\nprocs 0  load ?\nram ?\ndisks ?\n"
     );
     assert_eq!(String::from_utf8_lossy(&out.stderr), "");
 }
@@ -39,7 +39,7 @@ fn missing_root_still_succeeds() {
     assert!(out.status.success());
     assert_eq!(
         String::from_utf8(out.stdout).unwrap(),
-        "?\nprocs ?  load ?\nram ?\ndisks ?\n"
+        "?\nnet ?\nprocs ?  load ?\nram ?\ndisks ?\n"
     );
 }
 
@@ -185,7 +185,7 @@ fn output_writes_the_file_not_stdout() {
     assert_eq!(String::from_utf8_lossy(&out.stderr), "");
     assert_eq!(
         std::fs::read_to_string(&target).unwrap(),
-        "raspberrypi  Debian GNU/Linux 13 (trixie)  6.12.20-v8+ aarch64  up 19d 0h06m\nprocs 0  load ?\nram ?\ndisks ?\n"
+        "raspberrypi  Debian GNU/Linux 13 (trixie)  6.12.20-v8+ aarch64  up 19d 0h06m\nnet ?\nprocs 0  load ?\nram ?\ndisks ?\n"
     );
     std::fs::remove_dir_all(&dir).unwrap();
 }
@@ -228,12 +228,12 @@ fn renders_captured_machines() {
     assert!(out.status.success());
     assert_eq!(
         String::from_utf8(out.stdout).unwrap(),
-        "rpi4-ubuntu  Ubuntu 24.04.4 LTS  6.8.0-1057-raspi aarch64  up 158d 17h47m  Wed 25 Nov 14:01 CET\nprocs 98  load 1.56 2.67 3.05 /4\nram 55% 4.2G/7.6G  swap none  cache 3.1G  buffers 244M\ndisks / 23% 47G/211G  /boot/firmware 38% 189M/504M\n"
+        "rpi4-ubuntu  Ubuntu 24.04.4 LTS  6.8.0-1057-raspi aarch64  up 158d 17h47m  Wed 25 Nov 14:01 CET\nnet eth0 192.0.2.1\nprocs 98  load 1.56 2.67 3.05 /4\nram 55% 4.2G/7.6G  swap none  cache 3.1G  buffers 244M\ndisks / 23% 47G/211G  /boot/firmware 38% 189M/504M\n"
     );
     let out = run(&["--sysroot", &fixture("container")]);
     assert!(out.status.success());
     assert_eq!(
         String::from_utf8(out.stdout).unwrap(),
-        "container  Debian GNU/Linux 11 (bullseye)  6.8.0-149-generic x86_64  up 18h24m  Wed 25 Nov 12:35 UTC\nprocs 1  load 5.60 4.84 4.08 /20\nram 54% 12G/23G  swap 18% 6.9G/40G  cache 9.3G  buffers 1.8G\ndisks / 81% 16G/20G\n"
+        "container  Debian GNU/Linux 11 (bullseye)  6.8.0-149-generic x86_64  up 18h24m  Wed 25 Nov 12:35 UTC\nnet eth0 192.0.2.5\nprocs 1  load 5.60 4.84 4.08 /20\nram 54% 12G/23G  swap 18% 6.9G/40G  cache 9.3G  buffers 1.8G\ndisks / 81% 16G/20G\n"
     );
 }

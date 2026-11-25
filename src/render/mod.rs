@@ -33,6 +33,39 @@ pub fn host_line(host: &Host) -> String {
     parts.join("  ")
 }
 
+/// `net eth0 192.0.2.4 2001:db8::4`: the default-route interface, then its
+/// IPv4 and IPv6 addresses. The interface is repeated only when IPv6 leaves
+/// through another one (`net eth0 192.0.2.4  wg0 2001:db8::4`). Temporary
+/// plain line until the header layout exists. `None` without a network
+/// section or without any default route.
+#[must_use]
+pub fn net_line(sections: &[Section]) -> Option<String> {
+    let section = sections.iter().find(|s| s.id == SectionId::Network)?;
+    if section.error.is_some() {
+        return Some(format!("net {UNKNOWN}"));
+    }
+    let mut parts: Vec<String> = Vec::new();
+    let mut previous: Option<&str> = None;
+    for item in &section.items {
+        let Value::Address { interface, addr } = &item.value else {
+            parts.push(format!("{} {UNKNOWN}", item.label));
+            previous = None;
+            continue;
+        };
+        let addr = addr.map_or_else(|| UNKNOWN.to_owned(), |a| a.to_string());
+        if previous == Some(interface.as_str()) {
+            if let Some(last) = parts.last_mut() {
+                last.push(' ');
+                last.push_str(&addr);
+            }
+        } else {
+            parts.push(format!("{} {addr}", sanitize(interface)));
+        }
+        previous = Some(interface);
+    }
+    (!parts.is_empty()).then(|| format!("net {}", parts.join("  ")))
+}
+
 /// `procs 98  load 1.56 2.67 3.05 /4`. Temporary plain line until
 /// the column layout exists: no colour, no alignment. `None` without a load
 /// section.
@@ -349,6 +382,34 @@ mod tests {
         let failed = vec![Section::failed(SectionId::Disks, "unreadable")];
         assert_eq!(disks_line(&failed).unwrap(), "disks ?");
         assert_eq!(disks_line(&[]), None);
+    }
+
+    #[test]
+    fn net_line_formats() {
+        let section = |items| vec![Section::new(SectionId::Network, items)];
+        let address = |interface: &str, addr: Option<&str>| Value::Address {
+            interface: interface.into(),
+            addr: addr.map(|a| a.parse().unwrap()),
+        };
+        let dual = section(vec![
+            Item::new("ipv4", address("eth0", Some("192.0.2.4"))),
+            Item::new("ipv6", address("eth0", Some("2001:db8::4"))),
+        ]);
+        assert_eq!(net_line(&dual).unwrap(), "net eth0 192.0.2.4 2001:db8::4");
+        let split = section(vec![
+            Item::new("ipv4", address("eth0", Some("192.0.2.4"))),
+            Item::new("ipv6", address("wg\u{1b}0", None)),
+        ]);
+        assert_eq!(net_line(&split).unwrap(), "net eth0 192.0.2.4  wg?0 ?");
+        let broken_v6 = section(vec![
+            Item::new("ipv4", address("eth0", Some("192.0.2.4"))),
+            Item::new("ipv6", Value::Missing),
+        ]);
+        assert_eq!(net_line(&broken_v6).unwrap(), "net eth0 192.0.2.4  ipv6 ?");
+        assert_eq!(net_line(&section(vec![])), None, "no default route");
+        let failed = vec![Section::failed(SectionId::Network, "unreadable")];
+        assert_eq!(net_line(&failed).unwrap(), "net ?");
+        assert_eq!(net_line(&[]), None);
     }
 
     #[test]

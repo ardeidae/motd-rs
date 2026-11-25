@@ -4,12 +4,14 @@
 use std::fmt;
 
 pub mod cpu_list;
+pub mod if_inet6;
 pub mod loadavg;
 pub mod meminfo;
 pub mod mountinfo;
 pub mod os_release;
 pub mod pid_list;
 pub mod pid_stat;
+pub mod route;
 pub mod uptime;
 
 /// A parser failed on its input.

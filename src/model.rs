@@ -5,6 +5,7 @@
 //! renderer, so text and JSON output never disagree.
 
 use std::fmt;
+use std::net::IpAddr;
 use std::time::Duration;
 
 /// Health of an item, a section or the whole report.
@@ -73,6 +74,16 @@ pub mod memory_items {
     pub const CACHE: &str = "cache";
     /// Block device buffers ([`super::Value::Bytes`]), informational.
     pub const BUFFERS: &str = "buffers";
+}
+
+/// Item labels of the [`SectionId::Network`] section. Each item is a
+/// [`super::Value::Address`]; a family without a default route has
+/// no item.
+pub mod net_items {
+    /// Interface of the IPv4 default route and its address.
+    pub const IPV4: &str = "ipv4";
+    /// Interface of the IPv6 default route and its global address.
+    pub const IPV6: &str = "ipv6";
 }
 
 /// One section of the report. Each collector fills exactly one.
@@ -198,6 +209,14 @@ pub enum Value {
     /// An amount of bytes with no capacity to compare it with (cache, …).
     /// Informational: no threshold applies.
     Bytes(u64),
+    /// An interface and its address: where the machine is reached from.
+    Address {
+        /// Interface name, raw from the system (`eth0`).
+        interface: String,
+        /// Its address. `None`: the interface carries the default route but
+        /// has no usable address of that family.
+        addr: Option<IpAddr>,
+    },
     /// State of a watched service or port.
     State(ServiceState),
     /// Free text taken from the system. Renderers sanitise it.
