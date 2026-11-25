@@ -5,8 +5,8 @@ use crate::model::Host;
 /// Shown when a value could not be read.
 pub const UNKNOWN: &str = "?";
 
-/// `hostname  OS  kernel arch  up 19d 0h06m`. Missing parts are skipped,
-/// except the hostname, shown as `?`.
+/// `hostname  OS  kernel arch  up 19d 0h06m  Tue 24 Nov 10:26 CET`. Missing
+/// parts are skipped, except the hostname, shown as `?`.
 #[must_use]
 pub fn host_line(host: &Host) -> String {
     let mut parts = vec![sanitize(host.hostname.as_deref().unwrap_or(UNKNOWN))];
@@ -23,6 +23,10 @@ pub fn host_line(host: &Host) -> String {
     }
     if let Some(secs) = host.uptime_secs {
         parts.push(format!("up {}", format_uptime(secs)));
+    }
+    if let Some(time) = &host.local_time {
+        // The time zone name comes from the system's tz database.
+        parts.push(sanitize(time));
     }
     parts.join("  ")
 }
@@ -81,10 +85,11 @@ mod tests {
             kernel: Some("6.12.20-v8+".into()),
             arch: Some("aarch64".into()),
             uptime_secs: Some(1_642_000),
+            local_time: Some("Tue 24 Nov 10:26 CET".into()),
         };
         assert_eq!(
             host_line(&full),
-            "pi  Debian GNU/Linux 13 (trixie)  6.12.20-v8+ aarch64  up 19d 0h06m"
+            "pi  Debian GNU/Linux 13 (trixie)  6.12.20-v8+ aarch64  up 19d 0h06m  Tue 24 Nov 10:26 CET"
         );
         let empty = Host {
             hostname: None,
@@ -92,6 +97,7 @@ mod tests {
             kernel: None,
             arch: None,
             uptime_secs: None,
+            local_time: None,
         };
         assert_eq!(host_line(&empty), "?");
         let arch_only = Host {

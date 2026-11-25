@@ -1,13 +1,14 @@
-//! Host identity: hostname, OS, kernel, architecture, uptime.
+//! Host identity: hostname, OS, kernel, architecture, uptime, local time.
 
 use crate::model::Host;
 use crate::parse::{os_release, uptime};
 use crate::sys::Sys;
 use crate::sysroot::Sysroot;
 
-/// Reads the host facts.
+/// Reads the host facts. `now` (epoch seconds) is the report's timestamp, so
+/// the date shown is the moment the report claims to describe.
 #[must_use]
-pub fn collect(sysroot: &Sysroot, sys: &dyn Sys) -> Host {
+pub fn collect(sysroot: &Sysroot, sys: &dyn Sys, now: i64) -> Host {
     Host {
         hostname: read_trimmed(sysroot, "/proc/sys/kernel/hostname"),
         os: ["/etc/os-release", "/usr/lib/os-release"]
@@ -20,6 +21,7 @@ pub fn collect(sysroot: &Sysroot, sys: &dyn Sys) -> Host {
             .read_to_string("/proc/uptime")
             .ok()
             .and_then(|content| uptime::parse(&content).ok()),
+        local_time: sys.local_time(now).filter(|t| !t.is_empty()),
     }
 }
 
@@ -41,16 +43,44 @@ mod tests {
         ))
     }
 
+    fn collect_fixture(name: &str) -> Host {
+        let root = fixture(name);
+        let (sys, _) = Fake::load(root.root()).unwrap().into_backends();
+        collect(&root, sys.as_ref(), sys.now())
+    }
+
     #[test]
     fn reads_fixture() {
-        let root = fixture("minimal");
-        let (sys, _) = Fake::load(root.root()).unwrap().into_backends();
-        let host = collect(&root, sys.as_ref());
+        let host = collect_fixture("minimal");
         assert_eq!(host.hostname.as_deref(), Some("raspberrypi"));
         assert_eq!(host.os.as_deref(), Some("Debian GNU/Linux 13 (trixie)"));
         assert_eq!(host.kernel.as_deref(), Some("6.12.20-v8+"));
         assert_eq!(host.arch.as_deref(), Some("aarch64"));
         assert_eq!(host.uptime_secs, Some(1_642_000));
+        assert_eq!(host.local_time, None, "no local_time in its fake.toml");
+    }
+
+    #[test]
+    fn reads_captured_machines() {
+        let pi = collect_fixture("rpi4-ubuntu");
+        assert_eq!(pi.hostname.as_deref(), Some("rpi4-ubuntu"));
+        assert_eq!(pi.os.as_deref(), Some("Ubuntu 24.04.4 LTS"));
+        assert_eq!(pi.kernel.as_deref(), Some("6.8.0-1057-raspi"));
+        assert_eq!(pi.arch.as_deref(), Some("aarch64"));
+        assert_eq!(pi.uptime_secs, Some(13_715_221));
+        assert_eq!(pi.local_time.as_deref(), Some("Wed 25 Nov 14:01 CET"));
+
+        let container = collect_fixture("container");
+        assert_eq!(container.hostname.as_deref(), Some("container"));
+        assert_eq!(
+            container.os.as_deref(),
+            Some("Debian GNU/Linux 11 (bullseye)")
+        );
+        assert_eq!(container.arch.as_deref(), Some("x86_64"));
+        assert_eq!(
+            container.local_time.as_deref(),
+            Some("Wed 25 Nov 12:35 UTC")
+        );
     }
 
     #[test]
@@ -58,11 +88,13 @@ mod tests {
         let host = collect(
             &Sysroot::new("/nonexistent-motd-rs-root"),
             &crate::sys::FakeSys::default(),
+            0,
         );
         assert_eq!(host.hostname, None);
         assert_eq!(host.os, None);
         assert_eq!(host.kernel, None);
         assert_eq!(host.arch, None);
         assert_eq!(host.uptime_secs, None);
+        assert_eq!(host.local_time, None);
     }
 }

@@ -258,6 +258,9 @@ pub struct Host {
     pub arch: Option<String>,
     /// Seconds since boot.
     pub uptime_secs: Option<u64>,
+    /// Local date and time with the time zone (`Tue 24 Nov 10:26 CET`), at
+    /// [`Report::generated_at`].
+    pub local_time: Option<String>,
 }
 
 /// How long one collector took.

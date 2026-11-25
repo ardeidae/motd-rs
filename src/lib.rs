@@ -100,9 +100,10 @@ pub fn run(options: &Options) -> Result<String, Error> {
     });
     // Section collectors are registered here as they are written.
     let collected = collect::run(Vec::new(), &ctx, options.deadline);
+    let now = ctx.sys.now();
     let report = model::Report {
-        generated_at: ctx.sys.now(),
-        host: collect::host::collect(&ctx.sysroot, ctx.sys.as_ref()),
+        generated_at: now,
+        host: collect::host::collect(&ctx.sysroot, ctx.sys.as_ref(), now),
         sections: collected.sections,
         meta: model::Meta {
             timings: collected.timings,

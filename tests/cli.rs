@@ -218,3 +218,19 @@ fn invalid_option_value_exits_1() {
             .contains("invalid value '0' for --deadline")
     );
 }
+
+#[test]
+fn renders_captured_machines() {
+    let out = run(&["--sysroot", &fixture("rpi4-ubuntu")]);
+    assert!(out.status.success());
+    assert_eq!(
+        String::from_utf8(out.stdout).unwrap(),
+        "rpi4-ubuntu  Ubuntu 24.04.4 LTS  6.8.0-1057-raspi aarch64  up 158d 17h47m  Wed 25 Nov 14:01 CET\n"
+    );
+    let out = run(&["--sysroot", &fixture("container")]);
+    assert!(out.status.success());
+    assert_eq!(
+        String::from_utf8(out.stdout).unwrap(),
+        "container  Debian GNU/Linux 11 (bullseye)  6.8.0-149-generic x86_64  up 18h24m  Wed 25 Nov 12:35 UTC\n"
+    );
+}
