@@ -2,7 +2,7 @@
 //! report raw facts and renderers only show the status decided here.
 
 use crate::config::{Levels, Thresholds};
-use crate::model::{Section, SectionId, Status, Value, memory_items};
+use crate::model::{Section, SectionId, Status, Value, memory_items, usage_percent};
 
 /// Which load average decides the status: the 5-minute one. The 1-minute
 /// average reacts to short bursts (the login itself makes one), and the
@@ -43,16 +43,17 @@ fn judge(
     }
 }
 
-/// The used percentage, rounded down, against percent levels: a row shown
-/// as `79%` is never in warning at 80. `None` when `total` is 0 (nothing to
-/// fill, such as a machine without swap): no threshold applies.
+/// The used percentage ([`usage_percent`], rounded up like the display)
+/// against percent levels: a row is in warning exactly when its shown
+/// number is at or above `warn`. `None` when `total` is 0 (nothing to fill,
+/// such as a machine without swap): no threshold applies.
 fn usage(used: u64, total: u64, levels: Levels<u8>) -> Option<Status> {
-    let percent = (u128::from(used) * 100).checked_div(u128::from(total))?;
+    let percent = usage_percent(used, total)?;
     Some(level(
         percent,
         &Levels {
-            warn: u128::from(levels.warn),
-            crit: u128::from(levels.crit),
+            warn: u64::from(levels.warn),
+            crit: u64::from(levels.crit),
         },
     ))
 }
@@ -114,10 +115,20 @@ mod tests {
     }
 
     #[test]
-    fn usage_is_rounded_down_percent() {
+    fn usage_is_rounded_up_percent() {
         let l = Levels { warn: 80, crit: 90 };
         assert_eq!(usage(0, 100, l), Some(Status::Ok));
-        assert_eq!(usage(7999, 10_000, l), Some(Status::Ok), "79.99 %");
+        assert_eq!(usage(7900, 10_000, l), Some(Status::Ok), "79.00 %");
+        assert_eq!(
+            usage(7901, 10_000, l),
+            Some(Status::Warn),
+            "79.01 % shows 80"
+        );
+        assert_eq!(
+            usage(8901, 10_000, l),
+            Some(Status::Crit),
+            "89.01 % shows 90"
+        );
         assert_eq!(usage(80, 100, l), Some(Status::Warn), "exactly warn");
         assert_eq!(usage(90, 100, l), Some(Status::Crit), "exactly crit");
         assert_eq!(usage(150, 100, l), Some(Status::Crit), "over 100 %");

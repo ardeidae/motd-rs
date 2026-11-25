@@ -1,6 +1,8 @@
 //! Rendering: pure functions from collected facts to text.
 
-use crate::model::{Host, Item, Section, SectionId, Value, load_items, memory_items};
+use crate::model::{
+    Host, Item, Section, SectionId, Value, load_items, memory_items, usage_percent,
+};
 
 /// Shown when a value could not be read.
 pub const UNKNOWN: &str = "?";
@@ -155,14 +157,11 @@ pub fn format_size(bytes: u64) -> String {
     UNKNOWN.to_owned()
 }
 
-/// `used` as a whole percentage of `total`, rounded down like the
-/// thresholds (`79%` is never shown for a row in warning at 80). `?` when
-/// `total` is 0.
+/// `used` as a whole percentage of `total` ([`usage_percent`]: rounded up,
+/// like `df` and like the thresholds). `?` when `total` is 0.
 #[must_use]
 pub fn format_percent(used: u64, total: u64) -> String {
-    (u128::from(used) * 100)
-        .checked_div(u128::from(total))
-        .map_or_else(|| UNKNOWN.to_owned(), |percent| format!("{percent}%"))
+    usage_percent(used, total).map_or_else(|| UNKNOWN.to_owned(), |percent| format!("{percent}%"))
 }
 
 /// Compact uptime: `42m`, `5h07m`, `19d 0h06m`.
@@ -282,7 +281,9 @@ mod tests {
     #[test]
     fn percent_formats() {
         assert_eq!(format_percent(0, 10), "0%");
-        assert_eq!(format_percent(7999, 10_000), "79%");
+        assert_eq!(format_percent(7900, 10_000), "79%");
+        assert_eq!(format_percent(7901, 10_000), "80%");
+        assert_eq!(format_percent(1, 10_000), "1%");
         assert_eq!(format_percent(10, 10), "100%");
         assert_eq!(format_percent(u64::MAX, u64::MAX), "100%");
         assert_eq!(format_percent(1, 0), "?");

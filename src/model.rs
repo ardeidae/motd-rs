@@ -206,6 +206,23 @@ pub enum Value {
     Missing,
 }
 
+/// `used` as a whole percentage of `total`, **rounded up**, as POSIX
+/// requires for `df`: usage is never under-reported (99.01 % is 100), and the
+/// number matches what `df` prints. Thresholds and display both use this
+/// function, so a row's colour always agrees with its number. `None` when
+/// `total` is 0: nothing to fill, no percentage.
+#[must_use]
+pub fn usage_percent(used: u64, total: u64) -> Option<u64> {
+    let total = u128::from(total);
+    if total == 0 {
+        return None;
+    }
+    let percent = (u128::from(used) * 100).div_ceil(total);
+    // At most u64::MAX * 100: fits in u64 only when used ≤ total, so clamp
+    // the absurd case (used > total from a corrupt answer) instead.
+    Some(u64::try_from(percent).unwrap_or(u64::MAX))
+}
+
 /// One row of a section.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Item {
@@ -377,6 +394,20 @@ mod tests {
         assert_eq!(names.len(), SectionId::ALL.len());
         assert_eq!(SectionId::from_name("network"), None);
         assert_eq!(SectionId::from_name(""), None);
+    }
+
+    #[test]
+    fn usage_percent_rounds_up() {
+        assert_eq!(usage_percent(0, 100), Some(0));
+        assert_eq!(usage_percent(1, 10_000), Some(1), "0.01 % is not empty");
+        assert_eq!(usage_percent(7900, 10_000), Some(79), "exact stays");
+        assert_eq!(usage_percent(7901, 10_000), Some(80));
+        assert_eq!(usage_percent(9901, 10_000), Some(100));
+        assert_eq!(usage_percent(10, 10), Some(100));
+        assert_eq!(usage_percent(u64::MAX, u64::MAX), Some(100));
+        assert_eq!(usage_percent(u64::MAX, 1), Some(u64::MAX), "clamped");
+        assert_eq!(usage_percent(1, 0), None);
+        assert_eq!(usage_percent(0, 0), None);
     }
 
     #[test]
