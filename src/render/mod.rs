@@ -186,6 +186,26 @@ pub fn disks_line(sections: &[Section]) -> Option<String> {
     (!parts.is_empty()).then(|| format!("disks {}", parts.join("  ")))
 }
 
+/// `ports 22/tcp listening  80/tcp closed`. Temporary plain line until the
+/// column layout exists, like [`load_line`]. `None` without a ports section
+/// or when no port is watched.
+#[must_use]
+pub fn ports_line(sections: &[Section]) -> Option<String> {
+    let section = sections.iter().find(|s| s.id == SectionId::Ports)?;
+    if section.error.is_some() {
+        return Some(format!("ports {UNKNOWN}"));
+    }
+    let parts: Vec<String> = section
+        .items
+        .iter()
+        .map(|item| match item.value {
+            Value::State(state) => format!("{} {state}", item.label),
+            _ => format!("{} {UNKNOWN}", item.label),
+        })
+        .collect();
+    (!parts.is_empty()).then(|| format!("ports {}", parts.join("  ")))
+}
+
 /// IEC size in at most 4 characters, no locale: `999B`, `1.0K`, `9.9M`,
 /// `38G`, `222M`, `16E`. One decimal below 10 units, none from 10 up; a
 /// value that would need 4 digits moves to the next unit (`1000M` → `1.0G`).
@@ -433,6 +453,27 @@ mod tests {
         let failed = vec![Section::failed(SectionId::Network, "unreadable")];
         assert_eq!(net_line(&failed).unwrap(), "net ?");
         assert_eq!(net_line(&[]), None);
+    }
+
+    #[test]
+    fn ports_line_formats() {
+        use crate::model::ServiceState;
+        let section = vec![Section::new(
+            SectionId::Ports,
+            vec![
+                Item::new("22/tcp", Value::State(ServiceState::Listening)),
+                Item::new("80/tcp", Value::State(ServiceState::Closed)),
+                Item::new("53/udp", Value::Missing),
+            ],
+        )];
+        assert_eq!(
+            ports_line(&section).unwrap(),
+            "ports 22/tcp listening  80/tcp closed  53/udp ?"
+        );
+        assert_eq!(ports_line(&[Section::new(SectionId::Ports, vec![])]), None);
+        let failed = vec![Section::failed(SectionId::Ports, "timeout")];
+        assert_eq!(ports_line(&failed).unwrap(), "ports ?");
+        assert_eq!(ports_line(&[]), None);
     }
 
     #[test]

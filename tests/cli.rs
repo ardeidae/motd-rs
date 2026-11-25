@@ -237,3 +237,29 @@ fn renders_captured_machines() {
         "container  Debian GNU/Linux 11 (bullseye)  6.8.0-149-generic x86_64  up 18h24m  Wed 25 Nov 12:35 UTC\nnet eth0 192.0.2.5\nprocs 1  load 5.60 4.84 4.08 /20\nram 54% 12G/23G  swap 18% 6.9G/40G  cache 9.3G  buffers 1.8G\ndisks / 81% 16G/20G\n"
     );
 }
+
+#[test]
+fn watched_ports_line() {
+    let dir = scratch("ports");
+    let config = dir.join("config.toml");
+    std::fs::write(
+        &config,
+        "[ports]\nwatch = [\"22/tcp\", \"6443/tcp\", \"80/tcp\", \"53/udp\"]\n",
+    )
+    .unwrap();
+    let out = run(&[
+        "--sysroot",
+        &fixture("rpi4-ubuntu"),
+        "--config",
+        config.to_str().unwrap(),
+    ]);
+    std::fs::remove_dir_all(&dir).unwrap();
+    assert!(out.status.success());
+    let text = String::from_utf8(out.stdout).unwrap();
+    assert!(
+        text.ends_with(
+            "\nports 22/tcp listening  6443/tcp listening  80/tcp closed  53/udp listening\n"
+        ),
+        "{text}"
+    );
+}

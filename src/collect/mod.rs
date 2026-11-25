@@ -24,6 +24,7 @@ pub mod host;
 pub mod load;
 pub mod memory;
 pub mod network;
+pub mod ports;
 pub mod users;
 
 /// How long [`run`] waits for all collectors by default. Long enough for a

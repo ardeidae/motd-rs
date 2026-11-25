@@ -50,7 +50,9 @@ watch        = []      # systemd units ("sshd", ".service" implied) or "process:
 failed_units = true    # alert on any failed unit, watched or not
 
 [ports]
-watch = []             # "22/tcp", "22/tcp6", "53/udp", "53/udp6"
+watch = []             # "22/tcp", "22/tcp6", "53/udp", "53/udp6". Any local address counts;
+                       # "22/tcp" is also met by a dual-stack socket on "::" (it accepts IPv4),
+                       # unless net.ipv6.bindv6only = 1
 "#;
 
 /// Largest config file accepted. Guards against `--config /dev/zero` or a
@@ -411,6 +413,26 @@ impl TryFrom<String> for WatchedPort {
         }
         let port = port.parse::<u16>().map_err(|_| bad())?;
         Ok(Self { port, proto })
+    }
+}
+
+impl Proto {
+    /// Name in the config file, and file name under `/proc/net/`.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Tcp => "tcp",
+            Self::Tcp6 => "tcp6",
+            Self::Udp => "udp",
+            Self::Udp6 => "udp6",
+        }
+    }
+}
+
+/// Same form as in the config file: `22/tcp`.
+impl fmt::Display for WatchedPort {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}/{}", self.port, self.proto.as_str())
     }
 }
 

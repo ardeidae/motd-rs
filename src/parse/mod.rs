@@ -8,6 +8,7 @@ pub mod if_inet6;
 pub mod loadavg;
 pub mod meminfo;
 pub mod mountinfo;
+pub mod net_sockets;
 pub mod os_release;
 pub mod pid_list;
 pub mod pid_stat;

@@ -2,7 +2,7 @@
 //! report raw facts and renderers only show the status decided here.
 
 use crate::config::{Levels, Thresholds};
-use crate::model::{Section, SectionId, Status, Value, memory_items, usage_percent};
+use crate::model::{Section, SectionId, ServiceState, Status, Value, memory_items, usage_percent};
 
 /// Which load average decides the status: the 5-minute one. The 1-minute
 /// average reacts to short bursts (the login itself makes one), and the
@@ -39,7 +39,23 @@ fn judge(
             usage(used, total, thresholds.swap)
         }
         (SectionId::Disks, _, &Value::Usage { used, total }) => usage(used, total, thresholds.disk),
+        (_, _, &Value::State(state)) => watched(state),
         _ => None,
+    }
+}
+
+/// A watched port that nothing listens on is down: as critical as a failed
+/// service, since someone asked to be told. Service states are judged here
+/// once the services collector exists.
+const fn watched(state: ServiceState) -> Option<Status> {
+    match state {
+        ServiceState::Listening => Some(Status::Ok),
+        ServiceState::Closed => Some(Status::Crit),
+        ServiceState::Running
+        | ServiceState::Exited
+        | ServiceState::Failed
+        | ServiceState::Inactive
+        | ServiceState::NotFound => None,
     }
 }
 
@@ -252,6 +268,23 @@ mod tests {
             Status::Unknown,
             "missing stays unknown"
         );
+        assert_eq!(section.status, Status::Crit);
+    }
+
+    #[test]
+    fn closed_port_is_critical() {
+        let mut sections = [Section::new(
+            SectionId::Ports,
+            vec![
+                Item::new("22/tcp", Value::State(ServiceState::Listening)),
+                Item::new("80/tcp", Value::State(ServiceState::Closed)),
+                Item::new("53/udp", Value::Missing),
+            ],
+        )];
+        evaluate(&mut sections, &Thresholds::default());
+        let [section] = &sections;
+        let statuses: Vec<Status> = section.items.iter().map(|i| i.status).collect();
+        assert_eq!(statuses, [Status::Ok, Status::Crit, Status::Unknown]);
         assert_eq!(section.status, Status::Crit);
     }
 }

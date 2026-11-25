@@ -75,6 +75,7 @@ for f in \
     /proc/uptime /proc/loadavg /proc/meminfo /proc/mdstat \
     /proc/net/route /proc/net/ipv6_route /proc/net/if_inet6 \
     /proc/net/tcp /proc/net/tcp6 /proc/net/udp /proc/net/udp6 \
+    /proc/sys/net/ipv6/bindv6only \
     /proc/pressure/cpu /proc/pressure/memory /proc/pressure/io \
     /sys/devices/system/cpu/online \
     /run/reboot-required /run/reboot-required.pkgs \
