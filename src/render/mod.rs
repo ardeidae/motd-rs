@@ -1,7 +1,7 @@
 //! Rendering: pure functions from collected facts to text.
 
 use crate::model::{
-    Host, Item, Section, SectionId, Value, load_items, memory_items, usage_percent,
+    Host, Item, Section, SectionId, Value, load_items, memory_items, usage_percent, users_items,
 };
 
 /// Shown when a value could not be read.
@@ -64,6 +64,29 @@ pub fn net_line(sections: &[Section]) -> Option<String> {
         previous = Some(interface);
     }
     (!parts.is_empty()).then(|| format!("net {}", parts.join("  ")))
+}
+
+/// `users 1 (2 sessions)`: distinct people, then their sessions when there
+/// are more sessions than people. Temporary plain line until the header
+/// layout exists. `None` without a users section or when the system keeps
+/// no session records.
+#[must_use]
+pub fn users_line(sections: &[Section]) -> Option<String> {
+    let section = sections.iter().find(|s| s.id == SectionId::Users)?;
+    if section.error.is_some() {
+        return Some(format!("users {UNKNOWN}"));
+    }
+    let count = |label: &str| {
+        section.items.iter().find_map(|i| match i.value {
+            Value::Count(n) if i.label == label => Some(n),
+            _ => None,
+        })
+    };
+    let users = count(users_items::USERS)?;
+    Some(match count(users_items::SESSIONS) {
+        Some(sessions) if sessions > users => format!("users {users} ({sessions} sessions)"),
+        _ => format!("users {users}"),
+    })
 }
 
 /// `procs 98  load 1.56 2.67 3.05 /4`. Temporary plain line until
@@ -410,6 +433,28 @@ mod tests {
         let failed = vec![Section::failed(SectionId::Network, "unreadable")];
         assert_eq!(net_line(&failed).unwrap(), "net ?");
         assert_eq!(net_line(&[]), None);
+    }
+
+    #[test]
+    fn users_line_formats() {
+        let section = |users, sessions| {
+            vec![Section::new(
+                SectionId::Users,
+                vec![
+                    Item::new("users", Value::Count(users)),
+                    Item::new("sessions", Value::Count(sessions)),
+                    Item::new("remote", Value::Count(0)),
+                ],
+            )]
+        };
+        assert_eq!(users_line(&section(1, 2)).unwrap(), "users 1 (2 sessions)");
+        assert_eq!(users_line(&section(2, 2)).unwrap(), "users 2");
+        assert_eq!(users_line(&section(0, 0)).unwrap(), "users 0");
+        let none = vec![Section::new(SectionId::Users, vec![])];
+        assert_eq!(users_line(&none), None, "no session records");
+        let failed = vec![Section::failed(SectionId::Users, "unparsable")];
+        assert_eq!(users_line(&failed).unwrap(), "users ?");
+        assert_eq!(users_line(&[]), None);
     }
 
     #[test]

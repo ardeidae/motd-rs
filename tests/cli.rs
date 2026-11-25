@@ -228,7 +228,7 @@ fn renders_captured_machines() {
     assert!(out.status.success());
     assert_eq!(
         String::from_utf8(out.stdout).unwrap(),
-        "rpi4-ubuntu  Ubuntu 24.04.4 LTS  6.8.0-1057-raspi aarch64  up 158d 17h47m  Wed 25 Nov 14:01 CET\nnet eth0 192.0.2.1\nprocs 98  load 1.56 2.67 3.05 /4\nram 55% 4.2G/7.6G  swap none  cache 3.1G  buffers 244M\ndisks / 23% 47G/211G  /boot/firmware 38% 189M/504M\n"
+        "rpi4-ubuntu  Ubuntu 24.04.4 LTS  6.8.0-1057-raspi aarch64  up 158d 17h47m  Wed 25 Nov 14:01 CET\nnet eth0 192.0.2.1\nusers 1 (2 sessions)\nprocs 98  load 1.56 2.67 3.05 /4\nram 55% 4.2G/7.6G  swap none  cache 3.1G  buffers 244M\ndisks / 23% 47G/211G  /boot/firmware 38% 189M/504M\n"
     );
     let out = run(&["--sysroot", &fixture("container")]);
     assert!(out.status.success());

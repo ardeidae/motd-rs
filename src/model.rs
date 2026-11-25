@@ -76,6 +76,18 @@ pub mod memory_items {
     pub const BUFFERS: &str = "buffers";
 }
 
+/// Item labels of the [`SectionId::Users`] section, all
+/// [`super::Value::Count`]. The section has no item when the system keeps no
+/// session record at all (a container without logind or utmp).
+pub mod users_items {
+    /// Distinct logged-in people.
+    pub const USERS: &str = "users";
+    /// Their sessions (one person with two ssh logins: 1 user, 2 sessions).
+    pub const SESSIONS: &str = "sessions";
+    /// Sessions opened over the network.
+    pub const REMOTE: &str = "remote";
+}
+
 /// Item labels of the [`SectionId::Network`] section. Each item is a
 /// [`super::Value::Address`]; a family without a default route has
 /// no item.

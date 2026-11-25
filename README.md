@@ -5,9 +5,9 @@ the day.
 
 > **Status: early development.** It prints the host line (hostname, OS,
 > kernel, architecture, uptime, date), the default-route interface with its
-> IPv4 and IPv6 addresses, the process count and load, memory (RAM, swap,
-> cache, buffers) and disk usage on plain lines. Users, services, ports and
-> the column layout are coming.
+> IPv4 and IPv6 addresses, logged-in users, the process count and load,
+> memory (RAM, swap, cache, buffers) and disk usage on plain lines.
+> Services, ports and the column layout are coming.
 
 ## Goals
 

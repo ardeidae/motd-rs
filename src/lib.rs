@@ -105,6 +105,7 @@ pub fn run(options: &Options) -> Result<String, Error> {
         Box::new(collect::memory::Memory),
         Box::new(collect::disks::Disks::new(&config.disks)),
         Box::new(collect::network::Network),
+        Box::new(collect::users::Users),
     ];
     let mut collected = collect::run(collectors, &ctx, options.deadline);
     eval::evaluate(&mut collected.sections, &config.thresholds);
@@ -122,6 +123,7 @@ pub fn run(options: &Options) -> Result<String, Error> {
     out.push('\n');
     let lines = [
         render::net_line(&report.sections),
+        render::users_line(&report.sections),
         render::load_line(&report.sections),
         render::memory_line(&report.sections),
         render::disks_line(&report.sections),

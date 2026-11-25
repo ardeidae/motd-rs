@@ -12,7 +12,9 @@ pub mod os_release;
 pub mod pid_list;
 pub mod pid_stat;
 pub mod route;
+pub mod session;
 pub mod uptime;
+pub mod utmp;
 
 /// A parser failed on its input.
 #[derive(Debug, Clone, PartialEq, Eq)]

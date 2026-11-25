@@ -37,6 +37,15 @@ impl Sysroot {
         std::fs::read_to_string(self.path(system_path))
     }
 
+    /// Reads a whole file as bytes (binary files such as utmp).
+    ///
+    /// # Errors
+    ///
+    /// The file cannot be opened or read.
+    pub fn read(&self, system_path: &str) -> io::Result<Vec<u8>> {
+        std::fs::read(self.path(system_path))
+    }
+
     /// Reads a whole file; invalid UTF-8 is replaced instead of failing. For
     /// files that may carry raw non-UTF-8 bytes from users, such as mount
     /// points in mountinfo: one odd name must not hide every other line.
