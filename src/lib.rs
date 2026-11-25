@@ -107,7 +107,7 @@ pub fn run(options: &Options) -> Result<String, Error> {
         Box::new(collect::network::Network),
         Box::new(collect::users::Users),
         Box::new(collect::ports::Ports::new(&config.ports)),
-        Box::new(collect::ports::Ports::new(&config.ports)),
+        Box::new(collect::services::Services::new(&config.services)),
     ];
     let mut collected = collect::run(collectors, &ctx, options.deadline);
     eval::evaluate(&mut collected.sections, &config.thresholds);
@@ -130,7 +130,7 @@ pub fn run(options: &Options) -> Result<String, Error> {
         render::memory_line(&report.sections),
         render::disks_line(&report.sections),
         render::ports_line(&report.sections),
-        render::ports_line(&report.sections),
+        render::services_line(&report.sections),
     ];
     for line in lines.into_iter().flatten() {
         out.push_str(&line);

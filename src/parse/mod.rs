@@ -3,6 +3,7 @@
 
 use std::fmt;
 
+pub mod comm;
 pub mod cpu_list;
 pub mod if_inet6;
 pub mod loadavg;

@@ -39,23 +39,21 @@ fn judge(
             usage(used, total, thresholds.swap)
         }
         (SectionId::Disks, _, &Value::Usage { used, total }) => usage(used, total, thresholds.disk),
-        (_, _, &Value::State(state)) => watched(state),
+        (_, _, &Value::State(state)) => Some(watched(state)),
         _ => None,
     }
 }
 
-/// A watched port that nothing listens on is down: as critical as a failed
-/// service, since someone asked to be told. Service states are judged here
-/// once the services collector exists.
-const fn watched(state: ServiceState) -> Option<Status> {
+/// Something watched is expected to be up: someone asked to be told. A
+/// stopped service, a missing process or a port that nothing listens on is
+/// as critical as a failed one. A unit systemd does not know is a warning:
+/// most often a typo in the config or a package removed on purpose, not an
+/// outage.
+const fn watched(state: ServiceState) -> Status {
     match state {
-        ServiceState::Listening => Some(Status::Ok),
-        ServiceState::Closed => Some(Status::Crit),
-        ServiceState::Running
-        | ServiceState::Exited
-        | ServiceState::Failed
-        | ServiceState::Inactive
-        | ServiceState::NotFound => None,
+        ServiceState::Running | ServiceState::Exited | ServiceState::Listening => Status::Ok,
+        ServiceState::Failed | ServiceState::Inactive | ServiceState::Closed => Status::Crit,
+        ServiceState::NotFound => Status::Warn,
     }
 }
 
@@ -268,6 +266,32 @@ mod tests {
             Status::Unknown,
             "missing stays unknown"
         );
+        assert_eq!(section.status, Status::Crit);
+    }
+
+    #[test]
+    fn service_states() {
+        let states = [
+            (ServiceState::Running, Status::Ok),
+            (ServiceState::Exited, Status::Ok),
+            (ServiceState::Failed, Status::Crit),
+            (ServiceState::Inactive, Status::Crit),
+            (ServiceState::NotFound, Status::Warn),
+        ];
+        let mut sections = [Section::new(
+            SectionId::Services,
+            states
+                .iter()
+                .map(|&(state, _)| Item::new(state.as_str(), Value::State(state)))
+                .chain([Item::new("cron", Value::Missing)])
+                .collect(),
+        )];
+        evaluate(&mut sections, &Thresholds::default());
+        let [section] = &sections;
+        let statuses: Vec<Status> = section.items.iter().map(|i| i.status).collect();
+        let mut expected: Vec<Status> = states.iter().map(|&(_, status)| status).collect();
+        expected.push(Status::Unknown);
+        assert_eq!(statuses, expected);
         assert_eq!(section.status, Status::Crit);
     }
 

@@ -262,4 +262,63 @@ fn watched_ports_line() {
         ),
         "{text}"
     );
+    let ports_lines = text.lines().filter(|l| l.starts_with("ports ")).count();
+    assert_eq!(ports_lines, 1, "{text}");
+}
+
+/// Runs `fixture` with `config` and returns the output lines that start
+/// with `services`.
+fn services_lines(fixture_name: &str, config_text: &str) -> Vec<String> {
+    let dir = scratch(&format!("services-{fixture_name}"));
+    let config = dir.join("config.toml");
+    std::fs::write(&config, config_text).unwrap();
+    let out = run(&[
+        "--sysroot",
+        &fixture(fixture_name),
+        "--config",
+        config.to_str().unwrap(),
+    ]);
+    std::fs::remove_dir_all(&dir).unwrap();
+    assert!(out.status.success());
+    assert_eq!(String::from_utf8_lossy(&out.stderr), "");
+    String::from_utf8(out.stdout)
+        .unwrap()
+        .lines()
+        .filter(|line| line.starts_with("services"))
+        .map(str::to_owned)
+        .collect()
+}
+
+#[test]
+fn watched_services_line() {
+    // `minimal` has a fake systemd that knows ssh.service, and no process.
+    assert_eq!(
+        services_lines(
+            "minimal",
+            "[services]\nwatch = [\"ssh\", \"nope.timer\", \"process:sshd\"]\n"
+        ),
+        ["services ssh running  nope.timer not-found  sshd inactive"]
+    );
+    // Unit states captured on `rpi4-ubuntu`: apport is masked, auditd has no
+    // unit file, nginx was trimmed from the capture.
+    assert_eq!(
+        services_lines(
+            "rpi4-ubuntu",
+            "[services]\nwatch = [\"ssh\", \"k3s\", \"ufw\", \"apt-daily\", \"apport\", \"auditd\", \"process:sshd\", \"process:nginx\"]\n"
+        ),
+        [
+            "services ssh running  k3s running  ufw exited  apt-daily inactive  apport inactive  auditd not-found  sshd running  nginx inactive"
+        ]
+    );
+    // No systemd in the container: units are unknown, processes are still
+    // found in /proc.
+    assert_eq!(
+        services_lines(
+            "container",
+            "[services]\nwatch = [\"ssh\", \"process:sleep\"]\n"
+        ),
+        ["services ssh ?  sleep running"]
+    );
+    // Nothing watched (the default): no line.
+    assert_eq!(services_lines("minimal", ""), Vec::<String>::new());
 }

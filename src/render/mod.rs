@@ -191,19 +191,35 @@ pub fn disks_line(sections: &[Section]) -> Option<String> {
 /// or when no port is watched.
 #[must_use]
 pub fn ports_line(sections: &[Section]) -> Option<String> {
-    let section = sections.iter().find(|s| s.id == SectionId::Ports)?;
+    states_line(sections, SectionId::Ports)
+}
+
+/// `services sshd running  backup failed  nginx inactive`. Temporary plain
+/// line until the column layout exists, like [`load_line`]. `None` without
+/// a services section or when nothing is watched.
+#[must_use]
+pub fn services_line(sections: &[Section]) -> Option<String> {
+    states_line(sections, SectionId::Services)
+}
+
+/// `<section> <label> <state>  …` for a section of [`Value::State`] rows.
+fn states_line(sections: &[Section], id: SectionId) -> Option<String> {
+    let section = sections.iter().find(|s| s.id == id)?;
     if section.error.is_some() {
-        return Some(format!("ports {UNKNOWN}"));
+        return Some(format!("{id} {UNKNOWN}"));
     }
     let parts: Vec<String> = section
         .items
         .iter()
-        .map(|item| match item.value {
-            Value::State(state) => format!("{} {state}", item.label),
-            _ => format!("{} {UNKNOWN}", item.label),
+        .map(|item| {
+            let label = sanitize(&item.label);
+            match item.value {
+                Value::State(state) => format!("{label} {state}"),
+                _ => format!("{label} {UNKNOWN}"),
+            }
         })
         .collect();
-    (!parts.is_empty()).then(|| format!("ports {}", parts.join("  ")))
+    (!parts.is_empty()).then(|| format!("{id} {}", parts.join("  ")))
 }
 
 /// IEC size in at most 4 characters, no locale: `999B`, `1.0K`, `9.9M`,
@@ -474,6 +490,35 @@ mod tests {
         let failed = vec![Section::failed(SectionId::Ports, "timeout")];
         assert_eq!(ports_line(&failed).unwrap(), "ports ?");
         assert_eq!(ports_line(&[]), None);
+    }
+
+    #[test]
+    fn services_line_formats() {
+        use crate::model::ServiceState;
+        let section = vec![Section::new(
+            SectionId::Services,
+            vec![
+                Item::new("sshd", Value::State(ServiceState::Running)),
+                Item::new("backup", Value::State(ServiceState::Failed)),
+                Item::new("nope", Value::State(ServiceState::NotFound)),
+                Item::new("cron\u{1b}", Value::Missing),
+            ],
+        )];
+        assert_eq!(
+            services_line(&section).unwrap(),
+            "services sshd running  backup failed  nope not-found  cron? ?"
+        );
+        assert_eq!(
+            services_line(&[Section::new(SectionId::Services, vec![])]),
+            None
+        );
+        let failed = vec![Section::failed(SectionId::Services, "timeout")];
+        assert_eq!(services_line(&failed).unwrap(), "services ?");
+        // The ports section is not the services one.
+        assert_eq!(
+            services_line(&[Section::failed(SectionId::Ports, "timeout")]),
+            None
+        );
     }
 
     #[test]
