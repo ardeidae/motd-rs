@@ -3,7 +3,11 @@
 
 use std::fmt;
 
+pub mod cpu_list;
+pub mod loadavg;
 pub mod os_release;
+pub mod pid_list;
+pub mod pid_stat;
 pub mod uptime;
 
 /// A parser failed on its input.

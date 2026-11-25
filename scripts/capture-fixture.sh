@@ -78,6 +78,7 @@ for f in \
     /proc/pressure/cpu /proc/pressure/memory /proc/pressure/io \
     /sys/devices/system/cpu/online \
     /run/reboot-required /run/reboot-required.pkgs \
+    /proc/2/task/2/children \
     /etc/os-release /usr/lib/os-release; do
     grab "$f"
 done

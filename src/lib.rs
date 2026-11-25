@@ -10,6 +10,7 @@
 pub mod cli;
 pub mod collect;
 pub mod config;
+pub mod eval;
 pub mod fake;
 pub mod model;
 pub mod output;
@@ -98,8 +99,9 @@ pub fn run(options: &Options) -> Result<String, Error> {
         sys,
         systemd,
     });
-    // Section collectors are registered here as they are written.
-    let collected = collect::run(Vec::new(), &ctx, options.deadline);
+    let collectors: Vec<Box<dyn collect::Collector>> = vec![Box::new(collect::load::Load)];
+    let mut collected = collect::run(collectors, &ctx, options.deadline);
+    eval::evaluate(&mut collected.sections, &config.thresholds);
     let now = ctx.sys.now();
     let report = model::Report {
         generated_at: now,
@@ -110,10 +112,12 @@ pub fn run(options: &Options) -> Result<String, Error> {
             config_error: loaded.error.map(|err| err.to_string()),
         },
     };
-    // `config` is read by the collectors, eval and render as they are written.
-    let _ = config;
     let mut out = render::host_line(&report.host);
     out.push('\n');
+    if let Some(line) = render::load_line(&report.sections) {
+        out.push_str(&line);
+        out.push('\n');
+    }
     Ok(out)
 }
 

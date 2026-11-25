@@ -50,6 +50,18 @@ impl fmt::Display for Status {
     }
 }
 
+/// Item labels of the [`SectionId::Load`] section. They are keys, not text:
+/// renderers decide how each one is shown.
+pub mod load_items {
+    /// [`super::Value::Load`].
+    pub const LOAD: &str = "load";
+    /// Processes, kernel threads excluded ([`super::Value::Count`]).
+    pub const PROCS: &str = "procs";
+    /// Kernel threads ([`super::Value::Count`]). Not shown in the text
+    /// output: their number depends on the hardware, not on what runs.
+    pub const KERNEL_THREADS: &str = "kernel_threads";
+}
+
 /// One section of the report. Each collector fills exactly one.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum SectionId {
@@ -159,6 +171,17 @@ pub enum Value {
         /// Capacity. `0` means unknown or empty: no percentage can be shown.
         total: u64,
     },
+    /// Load averages over 1, 5 and 15 minutes, in hundredths (`1.56` → 156:
+    /// the kernel prints two decimals, so this is exact), and the number of
+    /// online CPUs (`0` = unknown).
+    Load {
+        /// 1, 5 and 15 minutes.
+        hundredths: [u32; 3],
+        /// Online CPUs.
+        cpus: u32,
+    },
+    /// A number of things (processes, …).
+    Count(u64),
     /// State of a watched service or port.
     State(ServiceState),
     /// Free text taken from the system. Renderers sanitise it.

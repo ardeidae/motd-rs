@@ -1,6 +1,6 @@
 //! Rendering: pure functions from collected facts to text.
 
-use crate::model::Host;
+use crate::model::{Host, Section, SectionId, Value, load_items};
 
 /// Shown when a value could not be read.
 pub const UNKNOWN: &str = "?";
@@ -29,6 +29,44 @@ pub fn host_line(host: &Host) -> String {
         parts.push(sanitize(time));
     }
     parts.join("  ")
+}
+
+/// `procs 98  load 1.56 2.67 3.05 /4`. Temporary plain line until
+/// the column layout exists: no colour, no alignment. `None` without a load
+/// section.
+#[must_use]
+pub fn load_line(sections: &[Section]) -> Option<String> {
+    let section = sections.iter().find(|s| s.id == SectionId::Load)?;
+    if section.error.is_some() {
+        return Some(format!("load {UNKNOWN}"));
+    }
+    let value = |label: &str| {
+        section
+            .items
+            .iter()
+            .find(|i| i.label == label)
+            .map(|i| &i.value)
+    };
+    let procs = match value(load_items::PROCS) {
+        Some(Value::Count(n)) => format!("procs {n}"),
+        _ => format!("procs {UNKNOWN}"),
+    };
+    let load = match value(load_items::LOAD) {
+        Some(Value::Load { hundredths, cpus }) => {
+            let averages: Vec<String> = hundredths
+                .iter()
+                .map(|h| format!("{}.{:02}", h / 100, h % 100))
+                .collect();
+            let cpus = if *cpus == 0 {
+                UNKNOWN.to_owned()
+            } else {
+                cpus.to_string()
+            };
+            format!("load {} /{cpus}", averages.join(" "))
+        }
+        _ => format!("load {UNKNOWN}"),
+    };
+    Some(format!("{procs}  {load}"))
 }
 
 /// Compact uptime: `42m`, `5h07m`, `19d 0h06m`.
@@ -68,6 +106,49 @@ mod tests {
         assert_eq!(format_uptime(5 * 3600 + 7 * 60), "5h07m");
         assert_eq!(format_uptime(1_642_000), "19d 0h06m");
         assert_eq!(format_uptime(u64::MAX), "213503982334601d 7h00m");
+    }
+
+    #[test]
+    fn load_line_formats() {
+        use crate::model::Item;
+        let section = |items| vec![Section::new(SectionId::Load, items)];
+        let full = section(vec![
+            Item::new(
+                "load",
+                Value::Load {
+                    hundredths: [156, 267, 5],
+                    cpus: 4,
+                },
+            ),
+            Item::new("procs", Value::Count(98)),
+            Item::new("kernel_threads", Value::Count(144)),
+        ]);
+        assert_eq!(
+            load_line(&full).unwrap(),
+            "procs 98  load 1.56 2.67 0.05 /4"
+        );
+        let no_cpus = section(vec![
+            Item::new(
+                "load",
+                Value::Load {
+                    hundredths: [0, 0, 0],
+                    cpus: 0,
+                },
+            ),
+            Item::new("procs", Value::Count(3)),
+        ]);
+        assert_eq!(
+            load_line(&no_cpus).unwrap(),
+            "procs 3  load 0.00 0.00 0.00 /?"
+        );
+        let missing = section(vec![
+            Item::new("load", Value::Missing),
+            Item::new("procs", Value::Missing),
+        ]);
+        assert_eq!(load_line(&missing).unwrap(), "procs ?  load ?");
+        let failed = vec![Section::failed(SectionId::Load, "timeout")];
+        assert_eq!(load_line(&failed).unwrap(), "load ?");
+        assert_eq!(load_line(&[]), None);
     }
 
     #[test]

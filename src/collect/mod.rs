@@ -20,6 +20,7 @@ use crate::sysroot::Sysroot;
 use crate::systemd::Systemd;
 
 pub mod host;
+pub mod load;
 
 /// How long [`run`] waits for all collectors by default. Long enough for a
 /// D-Bus round trip on a loaded Raspberry Pi, short enough to go unnoticed at

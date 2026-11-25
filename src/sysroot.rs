@@ -38,6 +38,49 @@ impl Sysroot {
     }
 
     /// The root directory itself.
+    /// Reads a small file (at most `N` bytes) with one buffer and no size
+    /// query: `/proc` files report a size of 0, so `read_to_string` would ask
+    /// for the size, then read in small growing chunks. Scanning
+    /// `/proc/<pid>/stat` for every process makes that overhead matter.
+    /// Content past `N` bytes is ignored; invalid UTF-8 is replaced.
+    ///
+    /// # Errors
+    ///
+    /// The file cannot be opened or read.
+    pub fn read_small<const N: usize>(&self, system_path: &str) -> io::Result<String> {
+        use std::io::Read;
+        let mut file = std::fs::File::open(self.path(system_path))?;
+        let mut buf = [0_u8; N];
+        let mut len = 0;
+        // A short read is not the end of the file in general: read until 0.
+        while let Some(rest) = buf.get_mut(len..) {
+            if rest.is_empty() {
+                break;
+            }
+            match file.read(rest) {
+                Ok(0) => break,
+                Ok(n) => len += n,
+                Err(err) if err.kind() == io::ErrorKind::Interrupted => {}
+                Err(err) => return Err(err),
+            }
+        }
+        Ok(String::from_utf8_lossy(buf.get(..len).unwrap_or_default()).into_owned())
+    }
+
+    /// Names of the entries of a directory (not `.` and `..`), in no
+    /// particular order. Names that are not valid UTF-8 are skipped: no system
+    /// directory we list (`/proc`, `/lib/modules`) uses them.
+    ///
+    /// # Errors
+    ///
+    /// The directory cannot be opened. An entry that vanishes while listing
+    /// (a process that exits) is skipped, not an error.
+    pub fn read_dir_names(&self, system_path: &str) -> io::Result<Vec<String>> {
+        Ok(std::fs::read_dir(self.path(system_path))?
+            .filter_map(|entry| entry.ok()?.file_name().into_string().ok())
+            .collect())
+    }
+
     #[must_use]
     pub fn root(&self) -> &Path {
         &self.root
@@ -59,6 +102,32 @@ mod tests {
             Sysroot::default().path("/proc/uptime"),
             PathBuf::from("/proc/uptime")
         );
+    }
+
+    #[test]
+    fn read_small_reads_whole_or_cuts() {
+        let sysroot = Sysroot::new(format!("{}/tests/fixtures", env!("CARGO_MANIFEST_DIR")));
+        let full = sysroot
+            .read_small::<512>("/rpi4-ubuntu/proc/loadavg")
+            .unwrap();
+        assert_eq!(full, "1.56 2.67 3.05 9/1264 1949508\n");
+        let cut = sysroot
+            .read_small::<4>("/rpi4-ubuntu/proc/loadavg")
+            .unwrap();
+        assert_eq!(cut, "1.56");
+        assert!(sysroot.read_small::<8>("/nonexistent").is_err());
+    }
+
+    #[test]
+    fn lists_directory_names() {
+        let sysroot = Sysroot::new(format!("{}/tests/fixtures", env!("CARGO_MANIFEST_DIR")));
+        let mut names = sysroot.read_dir_names("/rpi4-ubuntu/lib/modules").unwrap();
+        names.sort();
+        assert_eq!(
+            names,
+            ["6.8.0-1047-raspi", "6.8.0-1057-raspi", "6.8.0-1068-raspi"]
+        );
+        assert!(sysroot.read_dir_names("/nonexistent").is_err());
     }
 
     #[test]
