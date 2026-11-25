@@ -1,0 +1,1134 @@
+# Faked answers for this fixture (see src/fake.rs).
+# Captured with scripts/capture-fixture.sh on 2026-11-25.
+
+[sys]
+machine = "aarch64"
+now = 1795611687
+local_time = "Wed 25 Nov 14:01 CET"
+
+[[sys.interfaces]]
+name = "lo"
+addr = "127.0.0.1"
+prefix_len = 8
+up = true
+loopback = true
+
+[[sys.interfaces]]
+name = "eth0"
+addr = "192.0.2.1"
+prefix_len = 24
+up = true
+loopback = false
+
+[[sys.interfaces]]
+name = "flannel.1"
+addr = "198.51.100.0"
+prefix_len = 32
+up = true
+loopback = false
+
+[[sys.interfaces]]
+name = "cni0"
+addr = "198.51.100.1"
+prefix_len = 24
+up = true
+loopback = false
+
+[sys.statvfs."/"]
+total_bytes = 235689775104
+free_bytes = 184856211456
+avail_bytes = 175223758848
+total_inodes = 14537040
+free_inodes = 14022211
+
+[sys.statvfs."/boot/firmware"]
+total_bytes = 528592896
+free_bytes = 330690048
+avail_bytes = 330690048
+total_inodes = 0
+free_inodes = 0
+
+[sys.statvfs."/dev"]
+total_bytes = 3788058624
+free_bytes = 3788058624
+avail_bytes = 3788058624
+total_inodes = 924819
+free_inodes = 923259
+
+[sys.statvfs."/dev/shm"]
+total_bytes = 4090064896
+free_bytes = 4090064896
+avail_bytes = 4090064896
+total_inodes = 998551
+free_inodes = 998550
+
+[sys.statvfs."/run"]
+total_bytes = 818016256
+free_bytes = 809914368
+avail_bytes = 809914368
+total_inodes = 998551
+free_inodes = 995468
+
+[sys.statvfs."/run/lock"]
+total_bytes = 5242880
+free_bytes = 5242880
+avail_bytes = 5242880
+total_inodes = 998551
+free_inodes = 998546
+
+[sys.statvfs."/run/user/1000"]
+total_bytes = 818012160
+free_bytes = 818003968
+avail_bytes = 818003968
+total_inodes = 199710
+free_inodes = 199681
+
+[[systemd.units]]
+name = "apparmor.service"
+description = "Load AppArmor profiles"
+load_state = "loaded"
+active_state = "active"
+sub_state = "exited"
+
+[[systemd.units]]
+name = "apport-autoreport.service"
+description = "apport-autoreport.service"
+load_state = "masked"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "apport.service"
+description = "apport.service"
+load_state = "masked"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "apt-daily-upgrade.service"
+description = "Daily apt upgrade and clean activities"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "apt-daily.service"
+description = "Daily apt download activities"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "auditd.service"
+description = "auditd.service"
+load_state = "not-found"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "avahi-daemon.service"
+description = "avahi-daemon.service"
+load_state = "masked"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "blk-availability.service"
+description = "Availability of block devices"
+load_state = "loaded"
+active_state = "active"
+sub_state = "exited"
+
+[[systemd.units]]
+name = "chrony.service"
+description = "chrony, an NTP client/server"
+load_state = "loaded"
+active_state = "active"
+sub_state = "running"
+
+[[systemd.units]]
+name = "cloud-init-local.service"
+description = "Cloud-init: Local Stage (pre-network)"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "connman.service"
+description = "connman.service"
+load_state = "not-found"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "console-screen.service"
+description = "console-screen.service"
+load_state = "not-found"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "console-setup.service"
+description = "Set console font and keymap"
+load_state = "loaded"
+active_state = "active"
+sub_state = "exited"
+
+[[systemd.units]]
+name = "cron.service"
+description = "Regular background program processing daemon"
+load_state = "loaded"
+active_state = "active"
+sub_state = "running"
+
+[[systemd.units]]
+name = "dbus.service"
+description = "D-Bus System Message Bus"
+load_state = "loaded"
+active_state = "active"
+sub_state = "running"
+
+[[systemd.units]]
+name = "display-manager.service"
+description = "display-manager.service"
+load_state = "not-found"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "dm-event.service"
+description = "Device-mapper event daemon"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "dmesg.service"
+description = "Save initial kernel messages after boot"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "dpkg-db-backup.service"
+description = "Daily dpkg database backup service"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "e2scrub_all.service"
+description = "Online ext4 Metadata Check for All Filesystems"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "e2scrub_reap.service"
+description = "Remove Stale Online ext4 Metadata Check Snapshots"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "emergency.service"
+description = "Emergency Shell"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "fake-hwclock-load.service"
+description = "Restore the current clock"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "fake-hwclock-save.service"
+description = "Save the current clock"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "fcoe.service"
+description = "fcoe.service"
+load_state = "not-found"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "finalrd.service"
+description = "Create final runtime dir for shutdown pivot root"
+load_state = "loaded"
+active_state = "active"
+sub_state = "exited"
+
+[[systemd.units]]
+name = "fstrim.service"
+description = "Discard unused blocks on filesystems from /etc/fstab"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "fwupd-refresh.service"
+description = "Refresh fwupd metadata and update motd"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "fwupd.service"
+description = "Firmware update daemon"
+load_state = "loaded"
+active_state = "active"
+sub_state = "running"
+
+[[systemd.units]]
+name = "getty-static.service"
+description = "getty on tty2-tty6 if dbus and logind are not available"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "getty@tty1.service"
+description = "Getty on tty1"
+load_state = "loaded"
+active_state = "active"
+sub_state = "running"
+
+[[systemd.units]]
+name = "hv_kvp_daemon.service"
+description = "hv_kvp_daemon.service"
+load_state = "not-found"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "initrd-cleanup.service"
+description = "Cleaning Up and Shutting Down Daemons"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "initrd-parse-etc.service"
+description = "Mountpoints Configured in the Real Root"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "initrd-switch-root.service"
+description = "Switch Root"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "initrd-udevadm-cleanup-db.service"
+description = "Cleanup udev Database"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "iscsi-shutdown.service"
+description = "iscsi-shutdown.service"
+load_state = "not-found"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "iscsid.service"
+description = "iSCSI initiator daemon (iscsid)"
+load_state = "loaded"
+active_state = "active"
+sub_state = "running"
+
+[[systemd.units]]
+name = "k3s.service"
+description = "Lightweight Kubernetes"
+load_state = "loaded"
+active_state = "active"
+sub_state = "running"
+
+[[systemd.units]]
+name = "kbd.service"
+description = "kbd.service"
+load_state = "not-found"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "keyboard-setup.service"
+description = "Set the console keyboard layout"
+load_state = "loaded"
+active_state = "active"
+sub_state = "exited"
+
+[[systemd.units]]
+name = "kmod-static-nodes.service"
+description = "Create List of Static Device Nodes"
+load_state = "loaded"
+active_state = "active"
+sub_state = "exited"
+
+[[systemd.units]]
+name = "ldconfig.service"
+description = "Rebuild Dynamic Linker Cache"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "logrotate.service"
+description = "Rotate log files"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "lvm2-activation-early.service"
+description = "lvm2-activation-early.service"
+load_state = "not-found"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "lvm2-lvmpolld.service"
+description = "lvm2-lvmpolld.service"
+load_state = "masked"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "lvm2-monitor.service"
+description = "lvm2-monitor.service"
+load_state = "masked"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "man-db.service"
+description = "Daily man-db regeneration"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "ModemManager.service"
+description = "ModemManager.service"
+load_state = "masked"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "modprobe@configfs.service"
+description = "Load Kernel Module configfs"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "modprobe@dm_mod.service"
+description = "Load Kernel Module dm_mod"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "modprobe@drm.service"
+description = "Load Kernel Module drm"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "modprobe@efi_pstore.service"
+description = "Load Kernel Module efi_pstore"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "modprobe@fuse.service"
+description = "Load Kernel Module fuse"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "modprobe@loop.service"
+description = "Load Kernel Module loop"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "multipathd.service"
+description = "Device-Mapper Multipath Device Controller"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "netplan-ovs-cleanup.service"
+description = "OpenVSwitch configuration for cleanup"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "networkd-dispatcher.service"
+description = "Dispatcher daemon for systemd-networkd"
+load_state = "loaded"
+active_state = "active"
+sub_state = "running"
+
+[[systemd.units]]
+name = "NetworkManager.service"
+description = "NetworkManager.service"
+load_state = "not-found"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "ntp.service"
+description = "ntp.service"
+load_state = "not-found"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "ntpsec.service"
+description = "ntpsec.service"
+load_state = "not-found"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "open-iscsi.service"
+description = "Login to default iSCSI targets"
+load_state = "loaded"
+active_state = "active"
+sub_state = "exited"
+
+[[systemd.units]]
+name = "open-vm-tools.service"
+description = "Service for virtual machines hosted on VMware"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "openntpd.service"
+description = "openntpd.service"
+load_state = "not-found"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "ovsdb-server.service"
+description = "ovsdb-server.service"
+load_state = "not-found"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "plymouth-quit-wait.service"
+description = "Hold until boot process finishes up"
+load_state = "loaded"
+active_state = "active"
+sub_state = "exited"
+
+[[systemd.units]]
+name = "plymouth-quit.service"
+description = "Terminate Plymouth Boot Screen"
+load_state = "loaded"
+active_state = "active"
+sub_state = "exited"
+
+[[systemd.units]]
+name = "plymouth-read-write.service"
+description = "Tell Plymouth To Write Out Runtime Data"
+load_state = "loaded"
+active_state = "active"
+sub_state = "exited"
+
+[[systemd.units]]
+name = "plymouth-start.service"
+description = "Show Plymouth Boot Screen"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "plymouth-switch-root.service"
+description = "Plymouth switch root service"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "polkit.service"
+description = "Authorization Manager"
+load_state = "loaded"
+active_state = "active"
+sub_state = "running"
+
+[[systemd.units]]
+name = "pollinate.service"
+description = "Pollinate to seed the pseudo random number generator"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "rbdmap.service"
+description = "rbdmap.service"
+load_state = "not-found"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "rc-local.service"
+description = "/etc/rc.local Compatibility"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "rescue.service"
+description = "Rescue Shell"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "rpi-eeprom-update.service"
+description = "Check for Raspberry Pi EEPROM updates"
+load_state = "loaded"
+active_state = "active"
+sub_state = "exited"
+
+[[systemd.units]]
+name = "rsyslog.service"
+description = "System Logging Service"
+load_state = "loaded"
+active_state = "active"
+sub_state = "running"
+
+[[systemd.units]]
+name = "secureboot-db.service"
+description = "Secure Boot updates for DB and DBX"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "serial-getty@ttyAMA0.service"
+description = "Serial Getty on ttyAMA0"
+load_state = "loaded"
+active_state = "active"
+sub_state = "running"
+
+[[systemd.units]]
+name = "setvtrgb.service"
+description = "Set console scheme"
+load_state = "loaded"
+active_state = "active"
+sub_state = "exited"
+
+[[systemd.units]]
+name = "ssh.service"
+description = "OpenBSD Secure Shell server"
+load_state = "loaded"
+active_state = "active"
+sub_state = "running"
+
+[[systemd.units]]
+name = "sysstat-collect.service"
+description = "system activity accounting tool"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "sysstat-summary.service"
+description = "Generate a daily summary of process accounting"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "sysstat.service"
+description = "Resets System Activity Logs"
+load_state = "loaded"
+active_state = "active"
+sub_state = "exited"
+
+[[systemd.units]]
+name = "systemd-ask-password-console.service"
+description = "Dispatch Password Requests to Console"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "systemd-ask-password-plymouth.service"
+description = "Forward Password Requests to Plymouth"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "systemd-ask-password-wall.service"
+description = "Forward Password Requests to Wall"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "systemd-battery-check.service"
+description = "Check battery level during early boot"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "systemd-binfmt.service"
+description = "Set Up Additional Binary Formats"
+load_state = "loaded"
+active_state = "active"
+sub_state = "exited"
+
+[[systemd.units]]
+name = "systemd-bsod.service"
+description = "Displays emergency message in full screen."
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "systemd-firstboot.service"
+description = "First Boot Wizard"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "systemd-fsck-root.service"
+description = "File System Check on Root Device"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "systemd-fsck@dev-disk-by\\x2dlabel-system\\x2dboot.service"
+description = "File System Check on /dev/disk/by-label/system-boot"
+load_state = "loaded"
+active_state = "active"
+sub_state = "exited"
+
+[[systemd.units]]
+name = "systemd-fsckd.service"
+description = "File System Check Daemon to report status"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "systemd-hibernate-resume.service"
+description = "Resume from hibernation"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "systemd-hwdb-update.service"
+description = "Rebuild Hardware Database"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "systemd-initctl.service"
+description = "initctl Compatibility Daemon"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "systemd-journal-catalog-update.service"
+description = "Rebuild Journal Catalog"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "systemd-journal-flush.service"
+description = "Flush Journal to Persistent Storage"
+load_state = "loaded"
+active_state = "active"
+sub_state = "exited"
+
+[[systemd.units]]
+name = "systemd-journald.service"
+description = "Journal Service"
+load_state = "loaded"
+active_state = "active"
+sub_state = "running"
+
+[[systemd.units]]
+name = "systemd-logind.service"
+description = "User Login Management"
+load_state = "loaded"
+active_state = "active"
+sub_state = "running"
+
+[[systemd.units]]
+name = "systemd-machine-id-commit.service"
+description = "Commit a transient machine-id on disk"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "systemd-modules-load.service"
+description = "Load Kernel Modules"
+load_state = "loaded"
+active_state = "active"
+sub_state = "exited"
+
+[[systemd.units]]
+name = "systemd-networkd.service"
+description = "Network Configuration"
+load_state = "loaded"
+active_state = "active"
+sub_state = "running"
+
+[[systemd.units]]
+name = "systemd-oomd.service"
+description = "systemd-oomd.service"
+load_state = "not-found"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "systemd-pcrmachine.service"
+description = "TPM2 PCR Machine ID Measurement"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "systemd-pcrphase-initrd.service"
+description = "TPM2 PCR Barrier (initrd)"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "systemd-pcrphase-sysinit.service"
+description = "TPM2 PCR Barrier (Initialization)"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "systemd-pcrphase.service"
+description = "TPM2 PCR Barrier (User)"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "systemd-pstore.service"
+description = "Platform Persistent Storage Archival"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "systemd-quotacheck.service"
+description = "File System Quota Check"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "systemd-random-seed.service"
+description = "Load/Save OS Random Seed"
+load_state = "loaded"
+active_state = "active"
+sub_state = "exited"
+
+[[systemd.units]]
+name = "systemd-remount-fs.service"
+description = "Remount Root and Kernel File Systems"
+load_state = "loaded"
+active_state = "active"
+sub_state = "exited"
+
+[[systemd.units]]
+name = "systemd-repart.service"
+description = "Repartition Root Disk"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "systemd-resolved.service"
+description = "Network Name Resolution"
+load_state = "loaded"
+active_state = "active"
+sub_state = "running"
+
+[[systemd.units]]
+name = "systemd-rfkill.service"
+description = "Load/Save RF Kill Switch Status"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "systemd-soft-reboot.service"
+description = "Reboot System Userspace"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "systemd-sysctl.service"
+description = "Apply Kernel Variables"
+load_state = "loaded"
+active_state = "active"
+sub_state = "exited"
+
+[[systemd.units]]
+name = "systemd-sysext.service"
+description = "Merge System Extension Images into /usr/ and /opt/"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "systemd-sysusers.service"
+description = "Create System Users"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "systemd-timesyncd.service"
+description = "systemd-timesyncd.service"
+load_state = "not-found"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "systemd-tmpfiles-clean.service"
+description = "Cleanup of Temporary Directories"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "systemd-tmpfiles-setup-dev-early.service"
+description = "Create Static Device Nodes in /dev gracefully"
+load_state = "loaded"
+active_state = "active"
+sub_state = "exited"
+
+[[systemd.units]]
+name = "systemd-tmpfiles-setup-dev.service"
+description = "Create Static Device Nodes in /dev"
+load_state = "loaded"
+active_state = "active"
+sub_state = "exited"
+
+[[systemd.units]]
+name = "systemd-tmpfiles-setup.service"
+description = "Create Volatile Files and Directories"
+load_state = "loaded"
+active_state = "active"
+sub_state = "exited"
+
+[[systemd.units]]
+name = "systemd-tpm2-setup-early.service"
+description = "TPM2 SRK Setup (Early)"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "systemd-tpm2-setup.service"
+description = "TPM2 SRK Setup"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "systemd-udev-settle.service"
+description = "Wait for udev To Complete Device Initialization"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "systemd-udev-trigger.service"
+description = "Coldplug All udev Devices"
+load_state = "loaded"
+active_state = "active"
+sub_state = "exited"
+
+[[systemd.units]]
+name = "systemd-udevd.service"
+description = "Rule-based Manager for Device Events and Files"
+load_state = "loaded"
+active_state = "active"
+sub_state = "running"
+
+[[systemd.units]]
+name = "systemd-update-done.service"
+description = "Update is Completed"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "systemd-update-utmp-runlevel.service"
+description = "Record Runlevel Change in UTMP"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "systemd-update-utmp.service"
+description = "Record System Boot/Shutdown in UTMP"
+load_state = "loaded"
+active_state = "active"
+sub_state = "exited"
+
+[[systemd.units]]
+name = "systemd-user-sessions.service"
+description = "Permit User Sessions"
+load_state = "loaded"
+active_state = "active"
+sub_state = "exited"
+
+[[systemd.units]]
+name = "systemd-vconsole-setup.service"
+description = "systemd-vconsole-setup.service"
+load_state = "not-found"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "ua-auto-attach.service"
+description = "ua-auto-attach.service"
+load_state = "not-found"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "ua-reboot-cmds.service"
+description = "Ubuntu Pro reboot cmds"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "ua-timer.service"
+description = "Ubuntu Pro Timer for running repeated jobs"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "ubuntu-advantage-cloud-id-shim.service"
+description = "ubuntu-advantage-cloud-id-shim.service"
+load_state = "not-found"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "ubuntu-advantage.service"
+description = "Ubuntu Pro Background Auto Attach"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "udisks2.service"
+description = "Disk Manager"
+load_state = "loaded"
+active_state = "active"
+sub_state = "running"
+
+[[systemd.units]]
+name = "ufw.service"
+description = "Uncomplicated firewall"
+load_state = "loaded"
+active_state = "active"
+sub_state = "exited"
+
+[[systemd.units]]
+name = "unattended-upgrades.service"
+description = "Unattended Upgrades Shutdown"
+load_state = "loaded"
+active_state = "active"
+sub_state = "running"
+
+[[systemd.units]]
+name = "update-notifier-download.service"
+description = "Download data for packages that failed at package install time"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "update-notifier-motd.service"
+description = "Check to see whether there is a new version of Ubuntu available"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "user-runtime-dir@1000.service"
+description = "User Runtime Directory /run/user/1000"
+load_state = "loaded"
+active_state = "active"
+sub_state = "exited"
+
+[[systemd.units]]
+name = "user@1000.service"
+description = "User Manager for UID 1000"
+load_state = "loaded"
+active_state = "active"
+sub_state = "running"
+
+[[systemd.units]]
+name = "uuidd.service"
+description = "Daemon for generating UUIDs"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "vgauth.service"
+description = "Authentication service for virtual machines hosted on VMware"
+load_state = "loaded"
+active_state = "inactive"
+sub_state = "dead"
+
+[[systemd.units]]
+name = "wpa_supplicant.service"
+description = "wpa_supplicant.service"
+load_state = "masked"
+active_state = "inactive"
+sub_state = "dead"
