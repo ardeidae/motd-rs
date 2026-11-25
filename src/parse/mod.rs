@@ -5,6 +5,7 @@ use std::fmt;
 
 pub mod cpu_list;
 pub mod loadavg;
+pub mod meminfo;
 pub mod os_release;
 pub mod pid_list;
 pub mod pid_stat;

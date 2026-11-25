@@ -1,6 +1,6 @@
 //! Rendering: pure functions from collected facts to text.
 
-use crate::model::{Host, Section, SectionId, Value, load_items};
+use crate::model::{Host, Item, Section, SectionId, Value, load_items, memory_items};
 
 /// Shown when a value could not be read.
 pub const UNKNOWN: &str = "?";
@@ -67,6 +67,74 @@ pub fn load_line(sections: &[Section]) -> Option<String> {
         _ => format!("load {UNKNOWN}"),
     };
     Some(format!("{procs}  {load}"))
+}
+
+/// `ram 45% 3.3G/7.6G  swap none  cache 3.1G  buffers 244M`. Temporary
+/// plain line until the column layout exists, like [`load_line`]. Cache and
+/// buffers are informational: skipped when unreadable. `None` without a
+/// memory section.
+#[must_use]
+pub fn memory_line(sections: &[Section]) -> Option<String> {
+    let section = sections.iter().find(|s| s.id == SectionId::Memory)?;
+    if section.error.is_some() {
+        return Some(format!("{} {UNKNOWN}", memory_items::RAM));
+    }
+    let mut parts = Vec::new();
+    for Item { label, value, .. } in &section.items {
+        let part = match value {
+            Value::Usage { total: 0, .. } if label == memory_items::SWAP => format!("{label} none"),
+            Value::Usage { used, total } => format!(
+                "{label} {} {}/{}",
+                format_percent(*used, *total),
+                format_size(*used),
+                format_size(*total)
+            ),
+            Value::Bytes(bytes) => format!("{label} {}", format_size(*bytes)),
+            Value::Missing if label == memory_items::RAM || label == memory_items::SWAP => {
+                format!("{label} {UNKNOWN}")
+            }
+            _ => continue,
+        };
+        parts.push(part);
+    }
+    Some(parts.join("  "))
+}
+
+/// IEC size in at most 4 characters, no locale: `999B`, `1.0K`, `9.9M`,
+/// `38G`, `222M`, `16E`. One decimal below 10 units, none from 10 up; a
+/// value that would need 4 digits moves to the next unit (`1000M` → `1.0G`).
+#[must_use]
+pub fn format_size(bytes: u64) -> String {
+    const UNITS: [char; 6] = ['K', 'M', 'G', 'T', 'P', 'E'];
+    if bytes < 1000 {
+        return format!("{bytes}B");
+    }
+    let bytes = u128::from(bytes);
+    let mut divisor: u128 = 1;
+    for unit in UNITS {
+        divisor *= 1024;
+        // Rounded to the nearest tenth, then to the nearest unit.
+        let tenths = (bytes * 10 + divisor / 2) / divisor;
+        if tenths < 100 {
+            return format!("{}.{}{unit}", tenths / 10, tenths % 10);
+        }
+        let whole = (bytes + divisor / 2) / divisor;
+        if whole < 1000 {
+            return format!("{whole}{unit}");
+        }
+    }
+    // Unreachable: u64::MAX is 16E.
+    UNKNOWN.to_owned()
+}
+
+/// `used` as a whole percentage of `total`, rounded down like the
+/// thresholds (`79%` is never shown for a row in warning at 80). `?` when
+/// `total` is 0.
+#[must_use]
+pub fn format_percent(used: u64, total: u64) -> String {
+    (u128::from(used) * 100)
+        .checked_div(u128::from(total))
+        .map_or_else(|| UNKNOWN.to_owned(), |percent| format!("{percent}%"))
 }
 
 /// Compact uptime: `42m`, `5h07m`, `19d 0h06m`.
@@ -149,6 +217,85 @@ mod tests {
         let failed = vec![Section::failed(SectionId::Load, "timeout")];
         assert_eq!(load_line(&failed).unwrap(), "load ?");
         assert_eq!(load_line(&[]), None);
+    }
+
+    #[test]
+    fn size_formats() {
+        let cases: [(u64, &str); 16] = [
+            (0, "0B"),
+            (999, "999B"),
+            (1000, "1.0K"),
+            (1024, "1.0K"),
+            (1536, "1.5K"),
+            (10_188, "9.9K"),
+            (10_189, "10K"),
+            (222 * 1024 * 1024, "222M"),
+            (1023 * 1024 * 1024, "1.0G"),
+            (999 * 1024 * 1024, "999M"),
+            (999 * 1024 * 1024 + 512 * 1024, "1.0G"),
+            (38 * (1 << 30), "38G"),
+            (1_288_490_189, "1.2G"),
+            (3_624_796 * 1024, "3.5G"),
+            (1 << 60, "1.0E"),
+            (u64::MAX, "16E"),
+        ];
+        for (bytes, text) in cases {
+            assert_eq!(format_size(bytes), text, "{bytes}");
+            assert!(format_size(bytes).len() <= 4, "{bytes}");
+        }
+        // Every power of two and its neighbours stay within 4 characters.
+        for shift in 0..64 {
+            for bytes in [(1_u64 << shift) - 1, 1 << shift, (1 << shift) + 1] {
+                assert!(format_size(bytes).len() <= 4, "{bytes}");
+            }
+        }
+    }
+
+    #[test]
+    fn percent_formats() {
+        assert_eq!(format_percent(0, 10), "0%");
+        assert_eq!(format_percent(7999, 10_000), "79%");
+        assert_eq!(format_percent(10, 10), "100%");
+        assert_eq!(format_percent(u64::MAX, u64::MAX), "100%");
+        assert_eq!(format_percent(1, 0), "?");
+    }
+
+    #[test]
+    fn memory_line_formats() {
+        let section = |items| vec![Section::new(SectionId::Memory, items)];
+        let gib = 1 << 30;
+        let full = section(vec![
+            Item::new(
+                "ram",
+                Value::Usage {
+                    used: gib,
+                    total: 4 * gib,
+                },
+            ),
+            Item::new(
+                "swap",
+                Value::Usage {
+                    used: 1 << 20,
+                    total: 100 << 20,
+                },
+            ),
+            Item::new("cache", Value::Bytes(gib)),
+            Item::new("buffers", Value::Bytes(28 << 20)),
+        ]);
+        assert_eq!(
+            memory_line(&full).unwrap(),
+            "ram 25% 1.0G/4.0G  swap 1% 1.0M/100M  cache 1.0G  buffers 28M"
+        );
+        let sparse = section(vec![
+            Item::new("ram", Value::Missing),
+            Item::new("swap", Value::Usage { used: 0, total: 0 }),
+            Item::new("cache", Value::Missing),
+            Item::new("buffers", Value::Missing),
+        ]);
+        assert_eq!(memory_line(&sparse).unwrap(), "ram ?  swap none");
+        let failed = vec![Section::failed(SectionId::Memory, "unreadable")];
+        assert_eq!(memory_line(&failed).unwrap(), "ram ?");
+        assert_eq!(memory_line(&[]), None);
     }
 
     #[test]

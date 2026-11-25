@@ -99,7 +99,10 @@ pub fn run(options: &Options) -> Result<String, Error> {
         sys,
         systemd,
     });
-    let collectors: Vec<Box<dyn collect::Collector>> = vec![Box::new(collect::load::Load)];
+    let collectors: Vec<Box<dyn collect::Collector>> = vec![
+        Box::new(collect::load::Load),
+        Box::new(collect::memory::Memory),
+    ];
     let mut collected = collect::run(collectors, &ctx, options.deadline);
     eval::evaluate(&mut collected.sections, &config.thresholds);
     let now = ctx.sys.now();
@@ -114,7 +117,11 @@ pub fn run(options: &Options) -> Result<String, Error> {
     };
     let mut out = render::host_line(&report.host);
     out.push('\n');
-    if let Some(line) = render::load_line(&report.sections) {
+    let lines = [
+        render::load_line(&report.sections),
+        render::memory_line(&report.sections),
+    ];
+    for line in lines.into_iter().flatten() {
         out.push_str(&line);
         out.push('\n');
     }

@@ -62,6 +62,19 @@ pub mod load_items {
     pub const KERNEL_THREADS: &str = "kernel_threads";
 }
 
+/// Item labels of the [`SectionId::Memory`] section, in display order.
+pub mod memory_items {
+    /// RAM in use = `MemTotal - MemAvailable` ([`super::Value::Usage`]).
+    pub const RAM: &str = "ram";
+    /// Swap in use ([`super::Value::Usage`]). `total` 0 = no swap.
+    pub const SWAP: &str = "swap";
+    /// Page cache plus reclaimable slab ([`super::Value::Bytes`]),
+    /// informational: memory the kernel gives back on demand.
+    pub const CACHE: &str = "cache";
+    /// Block device buffers ([`super::Value::Bytes`]), informational.
+    pub const BUFFERS: &str = "buffers";
+}
+
 /// One section of the report. Each collector fills exactly one.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum SectionId {
@@ -182,6 +195,9 @@ pub enum Value {
     },
     /// A number of things (processes, …).
     Count(u64),
+    /// An amount of bytes with no capacity to compare it with (cache, …).
+    /// Informational: no threshold applies.
+    Bytes(u64),
     /// State of a watched service or port.
     State(ServiceState),
     /// Free text taken from the system. Renderers sanitise it.

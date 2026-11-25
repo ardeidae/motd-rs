@@ -2,7 +2,7 @@
 //! report raw facts and renderers only show the status decided here.
 
 use crate::config::{Levels, Thresholds};
-use crate::model::{Section, Status, Value};
+use crate::model::{Section, SectionId, Status, Value, memory_items};
 
 /// Which load average decides the status: the 5-minute one. The 1-minute
 /// average reacts to short bursts (the login itself makes one), and the
@@ -13,7 +13,7 @@ const LOAD_AVERAGE: usize = 1;
 pub fn evaluate(sections: &mut [Section], thresholds: &Thresholds) {
     for section in sections {
         for item in &mut section.items {
-            if let Some(status) = judge(&item.value, thresholds) {
+            if let Some(status) = judge(section.id, &item.label, &item.value, thresholds) {
                 item.status = status;
             }
         }
@@ -21,12 +21,39 @@ pub fn evaluate(sections: &mut [Section], thresholds: &Thresholds) {
     }
 }
 
-/// `None` for values that have no threshold (they keep their status).
-fn judge(value: &Value, thresholds: &Thresholds) -> Option<Status> {
-    match *value {
-        Value::Load { hundredths, cpus } => Some(load(hundredths, cpus, &thresholds.load)),
+/// `None` for values that have no threshold (they keep their status). A
+/// `Usage` is judged by what it measures: the same value type is used for
+/// RAM, swap and, later, disks.
+fn judge(
+    section: SectionId,
+    label: &str,
+    value: &Value,
+    thresholds: &Thresholds,
+) -> Option<Status> {
+    match (section, label, value) {
+        (_, _, &Value::Load { hundredths, cpus }) => Some(load(hundredths, cpus, &thresholds.load)),
+        (SectionId::Memory, memory_items::RAM, &Value::Usage { used, total }) => {
+            usage(used, total, thresholds.memory)
+        }
+        (SectionId::Memory, memory_items::SWAP, &Value::Usage { used, total }) => {
+            usage(used, total, thresholds.swap)
+        }
         _ => None,
     }
+}
+
+/// The used percentage, rounded down, against percent levels: a row shown
+/// as `79%` is never in warning at 80. `None` when `total` is 0 (nothing to
+/// fill, such as a machine without swap): no threshold applies.
+fn usage(used: u64, total: u64, levels: Levels<u8>) -> Option<Status> {
+    let percent = (u128::from(used) * 100).checked_div(u128::from(total))?;
+    Some(level(
+        percent,
+        &Levels {
+            warn: u128::from(levels.warn),
+            crit: u128::from(levels.crit),
+        },
+    ))
 }
 
 /// The load average per online CPU against the levels. Unknown when the CPU
@@ -83,6 +110,81 @@ mod tests {
     fn zero_levels_always_warn() {
         assert_eq!(load([0, 0, 0], 4, &levels(0.0, 5.0)), Status::Warn);
         assert_eq!(load([0, 0, 0], 4, &levels(0.0, 0.0)), Status::Crit);
+    }
+
+    #[test]
+    fn usage_is_rounded_down_percent() {
+        let l = Levels { warn: 80, crit: 90 };
+        assert_eq!(usage(0, 100, l), Some(Status::Ok));
+        assert_eq!(usage(7999, 10_000, l), Some(Status::Ok), "79.99 %");
+        assert_eq!(usage(80, 100, l), Some(Status::Warn), "exactly warn");
+        assert_eq!(usage(90, 100, l), Some(Status::Crit), "exactly crit");
+        assert_eq!(usage(150, 100, l), Some(Status::Crit), "over 100 %");
+        assert_eq!(usage(u64::MAX, u64::MAX, l), Some(Status::Crit));
+        assert_eq!(usage(0, 0, l), None, "nothing to fill");
+        assert_eq!(usage(0, 1, Levels { warn: 0, crit: 0 }), Some(Status::Crit));
+    }
+
+    #[test]
+    fn memory_rows_use_their_own_levels() {
+        let thresholds = Thresholds::default(); // memory 80/90, swap 10/20
+        let mut sections = [Section::new(
+            SectionId::Memory,
+            vec![
+                Item::new(
+                    "ram",
+                    Value::Usage {
+                        used: 50,
+                        total: 100,
+                    },
+                ),
+                Item::new(
+                    "swap",
+                    Value::Usage {
+                        used: 15,
+                        total: 100,
+                    },
+                ),
+                Item::new("cache", Value::Bytes(u64::MAX)),
+                Item::new("buffers", Value::Missing),
+            ],
+        )];
+        evaluate(&mut sections, &thresholds);
+        let [section] = &sections;
+        let statuses: Vec<Status> = section.items.iter().map(|i| i.status).collect();
+        assert_eq!(
+            statuses,
+            [Status::Ok, Status::Warn, Status::Ok, Status::Unknown]
+        );
+        assert_eq!(section.status, Status::Warn);
+    }
+
+    #[test]
+    fn no_swap_is_ok() {
+        let mut sections = [Section::new(
+            SectionId::Memory,
+            vec![Item::new("swap", Value::Usage { used: 0, total: 0 })],
+        )];
+        evaluate(&mut sections, &Thresholds::default());
+        assert_eq!(sections[0].status, Status::Ok);
+    }
+
+    #[test]
+    fn usage_outside_memory_is_not_judged_as_memory() {
+        // The label alone does not pick the levels: a row called "ram" in
+        // another section is not RAM.
+        assert_eq!(
+            judge(
+                SectionId::Users,
+                "ram",
+                &Value::Usage {
+                    used: 99,
+                    total: 100
+                },
+                &Thresholds::default()
+            ),
+            None
+        );
     }
 
     #[test]
