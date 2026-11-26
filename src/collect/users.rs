@@ -1,14 +1,14 @@
-//! Who is logged in: from logind's session files, or from utmp where there
-//! is no logind.
+//! Who is logged in: from logind over D-Bus, or from utmp where there is
+//! no logind.
 
 use std::collections::BTreeSet;
 use std::io;
 
 use crate::collect::{CollectError, Collector, Ctx};
 use crate::model::{Item, SectionId, Value, users_items};
-use crate::parse::{session, utmp};
+use crate::parse::utmp;
+use crate::systemd::{Session, SystemdError};
 
-const SESSIONS_DIR: &str = "/run/systemd/sessions";
 /// `/var/run` is a symlink to `/run` on every supported distribution.
 const UTMP: &str = "/run/utmp";
 
@@ -22,13 +22,19 @@ impl Collector for Users {
         SectionId::Users
     }
 
-    /// logind first: when its directory exists it is the truth, even when
-    /// empty (nobody logged in). utmp is only the fallback for systems
-    /// without logind. Neither: nothing to show, which is not an error.
+    /// logind first: when it answers it is the truth, even with no session
+    /// (nobody logged in). Its session files under `/run/systemd/sessions`
+    /// are not read: systemd marks them private, with no format promise.
+    /// utmp is only the fallback for systems without logind. Neither:
+    /// nothing to show, which is not an error.
     fn collect(&self, ctx: &Ctx) -> Result<Vec<Item>, CollectError> {
-        let logins = match ctx.sysroot.read_dir_names(SESSIONS_DIR) {
-            Ok(names) => logind_sessions(ctx, &names),
-            Err(err) if err.kind() == io::ErrorKind::NotFound => match ctx.sysroot.read(UTMP) {
+        let logins: Vec<(String, bool)> = match ctx.systemd.sessions() {
+            Ok(sessions) => sessions
+                .into_iter()
+                .filter(Session::is_open_user_session)
+                .map(|session| (session.user, session.remote))
+                .collect(),
+            Err(SystemdError::Unavailable(_)) => match ctx.sysroot.read(UTMP) {
                 Ok(bytes) => utmp::parse(&bytes)?
                     .into_iter()
                     .map(|login| (login.user, login.remote))
@@ -36,36 +42,12 @@ impl Collector for Users {
                 Err(err) if err.kind() == io::ErrorKind::NotFound => return Ok(Vec::new()),
                 Err(source) => return Err(CollectError::Io { path: UTMP, source }),
             },
-            Err(source) => {
-                return Err(CollectError::Io {
-                    path: SESSIONS_DIR,
-                    source,
-                });
-            }
+            // logind is there but failed: `?`, rather than switching to utmp,
+            // which may count differently (not every login writes utmp).
+            Err(err @ SystemdError::Call(_)) => return Err(CollectError::Bus(err)),
         };
         Ok(items(&logins))
     }
-}
-
-/// `(user, remote)` of every open user session. A file that vanished since
-/// the listing (logout) or does not parse is skipped: one odd session must
-/// not hide the others.
-fn logind_sessions(ctx: &Ctx, names: &[String]) -> Vec<(String, bool)> {
-    names
-        .iter()
-        // `<id>.ref` entries are FIFOs that logind uses to track sessions.
-        .filter(|name| !name.contains('.'))
-        .filter_map(|name| {
-            let text = ctx
-                .sysroot
-                .read_small::<4096>(&format!("{SESSIONS_DIR}/{name}"))
-                .ok()?;
-            let session = session::parse(&text).ok()?;
-            session
-                .is_open_user_session()
-                .then_some((session.user, session.remote))
-        })
-        .collect()
 }
 
 fn items(logins: &[(String, bool)]) -> Vec<Item> {
@@ -131,14 +113,55 @@ mod tests {
         result
     }
 
+    fn fixture(name: &str) -> PathBuf {
+        PathBuf::from(format!(
+            "{}/tests/fixtures/{name}",
+            env!("CARGO_MANIFEST_DIR")
+        ))
+    }
+
+    /// A bus that answers `sessions` with `answer`.
+    #[derive(Debug)]
+    struct Logind(Result<Vec<Session>, SystemdError>);
+
+    impl crate::systemd::Systemd for Logind {
+        fn query(
+            &self,
+            _: &[String],
+            _: bool,
+        ) -> Result<crate::systemd::UnitsAnswer, SystemdError> {
+            Err(SystemdError::Unavailable("test".into()))
+        }
+        fn sessions(&self) -> Result<Vec<Session>, SystemdError> {
+            self.0.clone()
+        }
+    }
+
+    fn collect_with(
+        name: &str,
+        files: &[(&str, &[u8])],
+        bus: Logind,
+    ) -> Result<Vec<Item>, CollectError> {
+        let dir = root(name, files);
+        let mut ctx = ctx(&dir);
+        ctx.systemd = Box::new(bus);
+        let result = Users.collect(&ctx);
+        std::fs::remove_dir_all(&dir).unwrap();
+        result
+    }
+
+    fn session(user: &str, class: &str, state: &str, remote: bool) -> Session {
+        Session {
+            user: user.into(),
+            class: class.into(),
+            state: state.into(),
+            remote,
+        }
+    }
+
     #[test]
     fn rpi4_ubuntu_one_user_two_ssh_sessions() {
-        let items = Users
-            .collect(&ctx(format!(
-                "{}/tests/fixtures/rpi4-ubuntu",
-                env!("CARGO_MANIFEST_DIR")
-            )))
-            .unwrap();
+        let items = Users.collect(&ctx(fixture("rpi4-ubuntu"))).unwrap();
         assert_eq!(
             counts(&items),
             [("users", 1), ("sessions", 2), ("remote", 2)]
@@ -146,60 +169,60 @@ mod tests {
     }
 
     #[test]
+    fn rpi5_desktop_console_and_ssh() {
+        let items = Users.collect(&ctx(fixture("rpi5"))).unwrap();
+        assert_eq!(
+            counts(&items),
+            [("users", 1), ("sessions", 3), ("remote", 1)]
+        );
+    }
+
+    #[test]
     fn container_has_no_session_records() {
-        let items = Users
-            .collect(&ctx(format!(
-                "{}/tests/fixtures/container",
-                env!("CARGO_MANIFEST_DIR")
-            )))
-            .unwrap();
+        let items = Users.collect(&ctx(fixture("container"))).unwrap();
         assert_eq!(items, []);
     }
 
     #[test]
-    fn logind_skips_non_people_closing_and_broken_files() {
-        let items = collect_in(
-            "logind",
-            &[
-                (
-                    "run/systemd/sessions/1",
-                    b"USER=alice\nCLASS=user\nSTATE=active\n",
-                ),
-                ("run/systemd/sessions/1.ref", b""),
-                (
-                    "run/systemd/sessions/2",
-                    b"USER=alice\nCLASS=user\nSTATE=online\nREMOTE=1\n",
-                ),
-                (
-                    "run/systemd/sessions/3",
-                    b"USER=bob\nCLASS=user\nSTATE=closing\n",
-                ),
-                (
-                    "run/systemd/sessions/4",
-                    b"USER=gdm\nCLASS=greeter\nSTATE=online\n",
-                ),
-                ("run/systemd/sessions/5", b"garbage"),
-                // logind wins: utmp is ignored when the directory exists.
-                ("run/utmp", &record(7, "mallory", "192.0.2.9")),
-            ],
-        )
-        .unwrap();
+    fn logind_counts_open_sessions_of_people_only() {
+        let sessions = vec![
+            session("alice", "user", "active", false),
+            session("alice", "user", "online", true),
+            session("root", "user-early", "active", true),
+            session("bob", "user", "closing", true),
+            session("gdm", "greeter", "online", false),
+            session("alice", "manager", "active", false),
+        ];
+        // logind wins: utmp is ignored when logind answers.
+        let utmp = record(7, "mallory", "192.0.2.9");
+        let items = collect_with("logind", &[("run/utmp", &utmp)], Logind(Ok(sessions))).unwrap();
         assert_eq!(
             counts(&items),
-            [("users", 1), ("sessions", 2), ("remote", 1)]
+            [("users", 2), ("sessions", 3), ("remote", 2)]
         );
     }
 
     #[test]
-    fn empty_logind_directory_is_zero_not_unknown() {
-        let dir = root("empty", &[]);
-        std::fs::create_dir_all(dir.join("run/systemd/sessions")).unwrap();
-        let items = Users.collect(&ctx(&dir)).unwrap();
-        std::fs::remove_dir_all(&dir).unwrap();
+    fn no_session_is_zero_not_unknown() {
+        let utmp = record(7, "mallory", "192.0.2.9");
+        let items = collect_with("empty", &[("run/utmp", &utmp)], Logind(Ok(Vec::new()))).unwrap();
         assert_eq!(
             counts(&items),
             [("users", 0), ("sessions", 0), ("remote", 0)]
         );
+    }
+
+    #[test]
+    fn failing_logind_fails_the_section_without_utmp() {
+        let utmp = record(7, "mallory", "192.0.2.9");
+        let err = collect_with(
+            "bus-error",
+            &[("run/utmp", &utmp)],
+            Logind(Err(SystemdError::Call("GetAll: boom".into()))),
+        )
+        .unwrap_err();
+        assert_eq!(err.reason(), "bus error");
+        assert_eq!(err.to_string(), "systemd call failed: GetAll: boom");
     }
 
     #[test]

@@ -1132,3 +1132,9 @@ description = "wpa_supplicant.service"
 load_state = "masked"
 active_state = "inactive"
 sub_state = "dead"
+
+[logind]
+sessions = [
+    "user1 user active remote",
+    "user1 user active remote",
+]

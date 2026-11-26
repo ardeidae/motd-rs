@@ -1,6 +1,7 @@
 //! A captured machine's faked answers, read from `<sysroot>/fake.toml`: the
-//! syscalls (`[sys]`, see [`FakeSys`]) and systemd (`[systemd]`, see
-//! [`FakeSystemd`]). Used by tests and whenever `--sysroot` is given.
+//! syscalls (`[sys]`, see [`FakeSys`]), systemd (`[systemd]`, see
+//! [`FakeSystemd`]) and logind (`[logind]`, see [`FakeLogind`]). Used by
+//! tests and whenever `--sysroot` is given.
 
 use std::fmt;
 use std::io;
@@ -9,7 +10,7 @@ use std::path::Path;
 use serde::Deserialize;
 
 use crate::sys::{FakeSys, Sys};
-use crate::systemd::{FakeSystemd, NoSystemd, Systemd};
+use crate::systemd::{FakeBus, FakeLogind, FakeSystemd, Systemd};
 
 /// Contents of `fake.toml`.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
@@ -20,6 +21,9 @@ pub struct Fake {
     /// systemd answers. `None` (no `[systemd]` table) = a machine without
     /// systemd, like a container.
     pub systemd: Option<FakeSystemd>,
+    /// logind sessions. `None` (no `[logind]` table) = no logind on the bus,
+    /// so the users section falls back to utmp.
+    pub logind: Option<FakeLogind>,
 }
 
 /// `fake.toml` could not be read or parsed.
@@ -69,11 +73,11 @@ impl Fake {
     /// Splits the fake into the two backends the collectors use.
     #[must_use]
     pub fn into_backends(self) -> (Box<dyn Sys>, Box<dyn Systemd>) {
-        let systemd: Box<dyn Systemd> = match self.systemd {
-            Some(fake) => Box::new(fake),
-            None => Box::new(NoSystemd),
+        let bus = FakeBus {
+            systemd: self.systemd,
+            logind: self.logind,
         };
-        (Box::new(self.sys), systemd)
+        (Box::new(self.sys), Box::new(bus))
     }
 }
 
@@ -94,6 +98,9 @@ mod tests {
             load_state = "loaded"
             active_state = "active"
             sub_state = "running"
+
+            [logind]
+            sessions = ["user1 user active remote"]
             "#,
         )
         .unwrap();
@@ -102,12 +109,14 @@ mod tests {
         assert_eq!(sys.machine().unwrap(), "armv6l");
         let answer = systemd.query(&["sshd.service".into()], false).unwrap();
         assert_eq!(answer.watched[0].sub_state, "running");
+        assert!(systemd.sessions().unwrap()[0].remote);
     }
 
     #[test]
     fn no_systemd_table_means_no_systemd() {
         let (_, systemd) = Fake::from_toml("[sys]\n").unwrap().into_backends();
         assert!(systemd.query(&[], true).is_err());
+        assert!(systemd.sessions().is_err());
     }
 
     #[test]
@@ -115,6 +124,10 @@ mod tests {
         assert!(Fake::from_toml("machine = \"x\"").is_err()); // must be under [sys]
         assert!(Fake::from_toml("[systemd]\nbogus = 1").is_err());
         assert!(Fake::from_toml("[[systemd.units]]\nname = \"a.service\"").is_err());
+        assert!(Fake::from_toml("[logind]\nsessions = [\"a user active\"]").is_err());
+        assert!(Fake::from_toml("[logind]\nsessions = [\"a user active ssh\"]").is_err());
+        assert!(Fake::from_toml("[logind]\nsessions = [\"a b c local d\"]").is_err());
+        assert!(Fake::from_toml("[logind]\nbogus = 1").is_err());
         assert!(Fake::from_toml("[sys").is_err());
     }
 

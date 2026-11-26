@@ -1,13 +1,13 @@
 #!/bin/sh
 # Captures this machine's state as a motd-rs test fixture: a fake root
 # filesystem with the files motd-rs reads, plus a fake.toml holding the
-# syscall and systemd answers. The result is anonymised.
+# syscall, systemd and logind answers. The result is anonymised.
 #
 # Usage: capture-fixture.sh <name> [<output dir>]
 #
 # Run it on the machine to capture, as a normal user or as root (root sees a
 # few more /proc entries). It needs only POSIX sh, awk, sed, stat and date;
-# `ip` and `systemctl` are used when present. Nothing on the machine is
+# `ip`, `systemctl` and `loginctl` are used when present. Nothing on the machine is
 # changed: the raw capture goes to a temporary directory that is removed on
 # exit, and only the anonymised copy is written to the output directory
 # (default: ./<name>).
@@ -95,11 +95,6 @@ for d in /proc/[0-9]*; do
     [ "${d#/proc/}" = "$$" ] && continue
     grab "$d/stat"
     grab "$d/comm"
-done
-
-# logind sessions. The `*.ref` entries are FIFOs: `grab` keeps regular files only.
-for f in /run/systemd/sessions/*; do
-    grab "$f"
 done
 
 for z in /sys/class/thermal/thermal_zone*; do
@@ -267,6 +262,25 @@ if [ -d /run/systemd/system ] && command -v systemctl >/dev/null 2>&1; then
         }' >>"$fake"
 fi
 
+# logind: one "<user> <class> <state> remote|local" string per session, as
+# motd-rs reads them over D-Bus. No [logind] table means "no logind" (the
+# users section then falls back to utmp). The user names are also added to
+# the words to anonymise.
+: >"$raw/sessions"
+if [ -d /run/systemd/system ] && command -v loginctl >/dev/null 2>&1 &&
+    ids=$(loginctl list-sessions --no-legend 2>/dev/null); then
+    for id in $(printf '%s\n' "$ids" | awk '{ print $1 }'); do
+        loginctl show-session "$id" -p Name -p Class -p State -p Remote 2>/dev/null |
+            awk -F= '{ v[$1] = substr($0, length($1) + 2) }
+                END { if (v["Name"] != "") print v["Name"], v["Class"], v["State"], (v["Remote"] == "yes" ? "remote" : "local") }'
+    done >"$raw/sessions"
+    {
+        printf '\n[logind]\nsessions = [\n'
+        awk "$toml_escape"'{ printf "    %s,\n", esc($0) }' "$raw/sessions"
+        printf ']\n'
+    } >>"$fake"
+fi
+
 # --- Anonymisation ----------------------------------------------------------
 
 # Values to replace with words: the hostname, then human users.
@@ -280,11 +294,7 @@ osid=$(awk -F= '$1 == "ID" { gsub(/"/, "", $2); print $2; exit }' /etc/os-releas
     case $host in *.*) printf 'host\t%s\n' "${host%%.*}" ;; esac
     { getent passwd 2>/dev/null || cat /etc/passwd; } |
         awk -F: '$3 >= 1000 && $3 < 65534 { print "user\t" $1 }'
-    for f in "$R"/run/systemd/sessions/*; do
-        if [ -f "$f" ]; then
-            awk -F= '$1 == "USER" { print "user\t" $2 }' "$f"
-        fi
-    done
+    awk '{ print "user\t" $1 }' "$raw/sessions"
 } >"$raw/words"
 
 (cd "$R" && find . -type f | sed 's|^\./||' | sort) >"$raw/files"
@@ -480,9 +490,6 @@ BEGIN {
                     line = substr(line, 1, p - 1) " - " c[i + 1] " " dm[c[i + 2]] substr(line, p + length(" - " c[i + 1] " " c[i + 2]))
                 }
                 line = dotted(line)
-            } else if (f ~ /^run\/systemd\/sessions\// && line ~ /^REMOTE_HOST=/) {
-                v = substr(line, 13)
-                line = "REMOTE_HOST=" (v ~ /^[0-9.]+$/ ? dotted(v) : server(v))
             } else if (f == "fake.toml") {
                 line = dotted(line)
             }

@@ -67,7 +67,10 @@ type Backends = (Box<dyn sys::Sys>, Box<dyn systemd::Systemd>);
 /// captured machine renders the same everywhere.
 fn backends(options: &Options) -> Result<Backends, Error> {
     if options.sysroot == sysroot::Sysroot::default() {
-        Ok((Box::new(sys::RealSys), Box::new(systemd::DbusSystemd)))
+        Ok((
+            Box::new(sys::RealSys),
+            Box::new(systemd::DbusSystemd::default()),
+        ))
     } else {
         Ok(fake::Fake::load(options.sysroot.root())?.into_backends())
     }

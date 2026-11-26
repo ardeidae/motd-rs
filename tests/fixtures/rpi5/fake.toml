@@ -957,3 +957,10 @@ description = "WPA supplicant"
 load_state = "loaded"
 active_state = "active"
 sub_state = "running"
+
+[logind]
+sessions = [
+    "user1 user active local",
+    "user1 user active remote",
+    "user1 user online local",
+]

@@ -17,7 +17,7 @@ use crate::model::{Item, Section, SectionId, Timing};
 use crate::parse::ParseError;
 use crate::sys::Sys;
 use crate::sysroot::Sysroot;
-use crate::systemd::Systemd;
+use crate::systemd::{Systemd, SystemdError};
 
 pub mod disks;
 pub mod host;
@@ -64,6 +64,8 @@ pub enum CollectError {
     Parse(ParseError),
     /// The data source does not exist on this system (no systemd, …).
     Unavailable(&'static str),
+    /// A D-Bus service that is running failed to answer.
+    Bus(SystemdError),
 }
 
 impl CollectError {
@@ -74,6 +76,7 @@ impl CollectError {
             Self::Io { .. } => "unreadable",
             Self::Parse(_) => "unparsable",
             Self::Unavailable(what) => what,
+            Self::Bus(_) => "bus error",
         }
     }
 }
@@ -84,6 +87,7 @@ impl fmt::Display for CollectError {
             Self::Io { path, source } => write!(f, "cannot read {path}: {source}"),
             Self::Parse(err) => err.fmt(f),
             Self::Unavailable(what) => f.write_str(what),
+            Self::Bus(err) => err.fmt(f),
         }
     }
 }
@@ -94,6 +98,7 @@ impl std::error::Error for CollectError {
             Self::Io { source, .. } => Some(source),
             Self::Parse(err) => Some(err),
             Self::Unavailable(_) => None,
+            Self::Bus(err) => Some(err),
         }
     }
 }
