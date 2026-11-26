@@ -124,16 +124,18 @@ pub fn run(options: &Options) -> Result<String, Error> {
             config_error: loaded.error.map(|err| err.to_string()),
         },
     };
-    let mut out = render::host_line(&report.host);
+    let charset =
+        render::OutputCharset::resolve(config.display.charset, |name| std::env::var_os(name));
+    let mut out = render::host_line(&report.host, charset);
     out.push('\n');
     let lines = [
-        render::net_line(&report.sections),
+        render::net_line(&report.sections, charset),
         render::users_line(&report.sections),
         render::load_line(&report.sections),
         render::memory_line(&report.sections),
-        render::disks_line(&report.sections),
-        render::ports_line(&report.sections),
-        render::services_line(&report.sections),
+        render::disks_line(&report.sections, charset),
+        render::ports_line(&report.sections, charset),
+        render::services_line(&report.sections, charset),
     ];
     for line in lines.into_iter().flatten() {
         out.push_str(&line);

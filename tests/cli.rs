@@ -8,6 +8,11 @@ fn run(args: &[&str]) -> Output {
     Command::new(BIN)
         .args(args)
         .env_remove("MOTD_RS_CONFIG")
+        // The output charset follows the locale: the C locale (ASCII) here,
+        // whatever the developer's terminal uses.
+        .env_remove("LC_ALL")
+        .env_remove("LC_CTYPE")
+        .env_remove("LANG")
         .output()
         .expect("binary runs")
 }

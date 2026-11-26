@@ -1,5 +1,9 @@
 //! Rendering: pure functions from collected facts to text.
 
+mod sanitize;
+
+pub use sanitize::{OutputCharset, sanitize};
+
 use crate::model::{
     Host, Item, Section, SectionId, Value, load_items, memory_items, usage_percent, users_items,
 };
@@ -10,15 +14,18 @@ pub const UNKNOWN: &str = "?";
 /// `hostname  OS  kernel arch  up 19d 0h06m  Tue 24 Nov 10:26 CET`. Missing
 /// parts are skipped, except the hostname, shown as `?`.
 #[must_use]
-pub fn host_line(host: &Host) -> String {
-    let mut parts = vec![sanitize(host.hostname.as_deref().unwrap_or(UNKNOWN))];
+pub fn host_line(host: &Host, charset: OutputCharset) -> String {
+    let mut parts = vec![sanitize(
+        host.hostname.as_deref().unwrap_or(UNKNOWN),
+        charset,
+    )];
     if let Some(os) = &host.os {
-        parts.push(sanitize(os));
+        parts.push(sanitize(os, charset));
     }
     let kernel_arch: Vec<String> = [&host.kernel, &host.arch]
         .into_iter()
         .flatten()
-        .map(|s| sanitize(s))
+        .map(|s| sanitize(s, charset))
         .collect();
     if !kernel_arch.is_empty() {
         parts.push(kernel_arch.join(" "));
@@ -28,7 +35,7 @@ pub fn host_line(host: &Host) -> String {
     }
     if let Some(time) = &host.local_time {
         // The time zone name comes from the system's tz database.
-        parts.push(sanitize(time));
+        parts.push(sanitize(time, charset));
     }
     parts.join("  ")
 }
@@ -39,7 +46,7 @@ pub fn host_line(host: &Host) -> String {
 /// plain line until the header layout exists. `None` without a network
 /// section or without any default route.
 #[must_use]
-pub fn net_line(sections: &[Section]) -> Option<String> {
+pub fn net_line(sections: &[Section], charset: OutputCharset) -> Option<String> {
     let section = sections.iter().find(|s| s.id == SectionId::Network)?;
     if section.error.is_some() {
         return Some(format!("net {UNKNOWN}"));
@@ -59,7 +66,7 @@ pub fn net_line(sections: &[Section]) -> Option<String> {
                 last.push_str(&addr);
             }
         } else {
-            parts.push(format!("{} {addr}", sanitize(interface)));
+            parts.push(format!("{} {addr}", sanitize(interface, charset)));
         }
         previous = Some(interface);
     }
@@ -162,7 +169,7 @@ pub fn memory_line(sections: &[Section]) -> Option<String> {
 /// line until the column layout exists, like [`load_line`]. `None` without
 /// a disks section or when it has no row (nothing to show).
 #[must_use]
-pub fn disks_line(sections: &[Section]) -> Option<String> {
+pub fn disks_line(sections: &[Section], charset: OutputCharset) -> Option<String> {
     let section = sections.iter().find(|s| s.id == SectionId::Disks)?;
     if section.error.is_some() {
         return Some(format!("disks {UNKNOWN}"));
@@ -171,7 +178,7 @@ pub fn disks_line(sections: &[Section]) -> Option<String> {
         .items
         .iter()
         .map(|item| {
-            let label = sanitize(&item.label);
+            let label = sanitize(&item.label, charset);
             match item.value {
                 Value::Usage { used, total } => format!(
                     "{label} {} {}/{}",
@@ -190,20 +197,20 @@ pub fn disks_line(sections: &[Section]) -> Option<String> {
 /// column layout exists, like [`load_line`]. `None` without a ports section
 /// or when no port is watched.
 #[must_use]
-pub fn ports_line(sections: &[Section]) -> Option<String> {
-    states_line(sections, SectionId::Ports)
+pub fn ports_line(sections: &[Section], charset: OutputCharset) -> Option<String> {
+    states_line(sections, SectionId::Ports, charset)
 }
 
 /// `services sshd running  backup failed  nginx inactive`. Temporary plain
 /// line until the column layout exists, like [`load_line`]. `None` without
 /// a services section or when nothing is watched.
 #[must_use]
-pub fn services_line(sections: &[Section]) -> Option<String> {
-    states_line(sections, SectionId::Services)
+pub fn services_line(sections: &[Section], charset: OutputCharset) -> Option<String> {
+    states_line(sections, SectionId::Services, charset)
 }
 
 /// `<section> <label> <state>  …` for a section of [`Value::State`] rows.
-fn states_line(sections: &[Section], id: SectionId) -> Option<String> {
+fn states_line(sections: &[Section], id: SectionId, charset: OutputCharset) -> Option<String> {
     let section = sections.iter().find(|s| s.id == id)?;
     if section.error.is_some() {
         return Some(format!("{id} {UNKNOWN}"));
@@ -212,7 +219,7 @@ fn states_line(sections: &[Section], id: SectionId) -> Option<String> {
         .items
         .iter()
         .map(|item| {
-            let label = sanitize(&item.label);
+            let label = sanitize(&item.label, charset);
             match item.value {
                 Value::State(state) => format!("{label} {state}"),
                 _ => format!("{label} {UNKNOWN}"),
@@ -271,19 +278,11 @@ pub fn format_uptime(secs: u64) -> String {
     }
 }
 
-/// Replaces control characters (C0, DEL, C1, including ESC) with `?`, so that
-/// system data can never inject terminal escape sequences.
-// To do: charset detection, and transliteration when the output is ASCII.
-#[must_use]
-pub fn sanitize(text: &str) -> String {
-    text.chars()
-        .map(|c| if c.is_control() { '?' } else { c })
-        .collect()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    const U: OutputCharset = OutputCharset::Utf8;
 
     #[test]
     fn uptime_formats() {
@@ -434,13 +433,19 @@ mod tests {
             Item::new("/mnt/\u{1b}[31m", Value::Missing),
         ]);
         assert_eq!(
-            disks_line(&rows).unwrap(),
+            disks_line(&rows, U).unwrap(),
             "disks / 80% 16G/20G  /mnt/?[31m ?"
         );
-        assert_eq!(disks_line(&section(vec![])), None, "nothing to show");
+        let accented = section(vec![Item::new("/media/Données", Value::Missing)]);
+        assert_eq!(
+            disks_line(&accented, OutputCharset::Ascii).unwrap(),
+            "disks /media/Donnees ?"
+        );
+        assert_eq!(disks_line(&accented, U).unwrap(), "disks /media/Données ?");
+        assert_eq!(disks_line(&section(vec![]), U), None, "nothing to show");
         let failed = vec![Section::failed(SectionId::Disks, "unreadable")];
-        assert_eq!(disks_line(&failed).unwrap(), "disks ?");
-        assert_eq!(disks_line(&[]), None);
+        assert_eq!(disks_line(&failed, U).unwrap(), "disks ?");
+        assert_eq!(disks_line(&[], U), None);
     }
 
     #[test]
@@ -454,21 +459,27 @@ mod tests {
             Item::new("ipv4", address("eth0", Some("192.0.2.4"))),
             Item::new("ipv6", address("eth0", Some("2001:db8::4"))),
         ]);
-        assert_eq!(net_line(&dual).unwrap(), "net eth0 192.0.2.4 2001:db8::4");
+        assert_eq!(
+            net_line(&dual, U).unwrap(),
+            "net eth0 192.0.2.4 2001:db8::4"
+        );
         let split = section(vec![
             Item::new("ipv4", address("eth0", Some("192.0.2.4"))),
             Item::new("ipv6", address("wg\u{1b}0", None)),
         ]);
-        assert_eq!(net_line(&split).unwrap(), "net eth0 192.0.2.4  wg?0 ?");
+        assert_eq!(net_line(&split, U).unwrap(), "net eth0 192.0.2.4  wg?0 ?");
         let broken_v6 = section(vec![
             Item::new("ipv4", address("eth0", Some("192.0.2.4"))),
             Item::new("ipv6", Value::Missing),
         ]);
-        assert_eq!(net_line(&broken_v6).unwrap(), "net eth0 192.0.2.4  ipv6 ?");
-        assert_eq!(net_line(&section(vec![])), None, "no default route");
+        assert_eq!(
+            net_line(&broken_v6, U).unwrap(),
+            "net eth0 192.0.2.4  ipv6 ?"
+        );
+        assert_eq!(net_line(&section(vec![]), U), None, "no default route");
         let failed = vec![Section::failed(SectionId::Network, "unreadable")];
-        assert_eq!(net_line(&failed).unwrap(), "net ?");
-        assert_eq!(net_line(&[]), None);
+        assert_eq!(net_line(&failed, U).unwrap(), "net ?");
+        assert_eq!(net_line(&[], U), None);
     }
 
     #[test]
@@ -483,13 +494,16 @@ mod tests {
             ],
         )];
         assert_eq!(
-            ports_line(&section).unwrap(),
+            ports_line(&section, U).unwrap(),
             "ports 22/tcp listening  80/tcp closed  53/udp ?"
         );
-        assert_eq!(ports_line(&[Section::new(SectionId::Ports, vec![])]), None);
+        assert_eq!(
+            ports_line(&[Section::new(SectionId::Ports, vec![])], U),
+            None
+        );
         let failed = vec![Section::failed(SectionId::Ports, "timeout")];
-        assert_eq!(ports_line(&failed).unwrap(), "ports ?");
-        assert_eq!(ports_line(&[]), None);
+        assert_eq!(ports_line(&failed, U).unwrap(), "ports ?");
+        assert_eq!(ports_line(&[], U), None);
     }
 
     #[test]
@@ -505,18 +519,18 @@ mod tests {
             ],
         )];
         assert_eq!(
-            services_line(&section).unwrap(),
+            services_line(&section, U).unwrap(),
             "services sshd running  backup failed  nope not-found  cron? ?"
         );
         assert_eq!(
-            services_line(&[Section::new(SectionId::Services, vec![])]),
+            services_line(&[Section::new(SectionId::Services, vec![])], U),
             None
         );
         let failed = vec![Section::failed(SectionId::Services, "timeout")];
-        assert_eq!(services_line(&failed).unwrap(), "services ?");
+        assert_eq!(services_line(&failed, U).unwrap(), "services ?");
         // The ports section is not the services one.
         assert_eq!(
-            services_line(&[Section::failed(SectionId::Ports, "timeout")]),
+            services_line(&[Section::failed(SectionId::Ports, "timeout")], U),
             None
         );
     }
@@ -544,13 +558,6 @@ mod tests {
     }
 
     #[test]
-    fn sanitize_blocks_escapes() {
-        assert_eq!(sanitize("/mnt/\u{1b}[31mred"), "/mnt/?[31mred");
-        assert_eq!(sanitize("a\tb\nc\u{7f}\u{9b}"), "a?b?c??");
-        assert_eq!(sanitize("/media/Données"), "/media/Données");
-    }
-
-    #[test]
     fn host_line_full_and_empty() {
         let full = Host {
             hostname: Some("pi".into()),
@@ -561,7 +568,7 @@ mod tests {
             local_time: Some("Tue 24 Nov 10:26 CET".into()),
         };
         assert_eq!(
-            host_line(&full),
+            host_line(&full, U),
             "pi  Debian GNU/Linux 13 (trixie)  6.12.20-v8+ aarch64  up 19d 0h06m  Tue 24 Nov 10:26 CET"
         );
         let empty = Host {
@@ -572,11 +579,11 @@ mod tests {
             uptime_secs: None,
             local_time: None,
         };
-        assert_eq!(host_line(&empty), "?");
+        assert_eq!(host_line(&empty, U), "?");
         let arch_only = Host {
             arch: Some("x86_64".into()),
             ..empty
         };
-        assert_eq!(host_line(&arch_only), "?  x86_64");
+        assert_eq!(host_line(&arch_only, U), "?  x86_64");
     }
 }
